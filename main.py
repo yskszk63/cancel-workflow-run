@@ -29,7 +29,7 @@ class Database:
 
     @classmethod
     async def open(cls, url):
-        pool = await asyncpg.create_pool(url)
+        pool = await asyncpg.create_pool(url, min_size=1, max_size=1)
 
         try:
             await pool.execute(
