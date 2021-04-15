@@ -9,9 +9,12 @@ httpx = "*"
 asyncpg = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 gunicorn = "*"
-flake8 = "*"
 
 [dev-packages]
+flake8 = "*"
+flake8-isort = "*"
+flake8-quotes = "*"
+flake8-annotations = "*"
 
 [requires]
 python_version = "3.9"

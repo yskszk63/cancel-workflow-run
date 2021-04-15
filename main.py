@@ -1,13 +1,15 @@
-import os
-from typing import Optional
+from __future__ import annotations
+
 import hmac
+import os
+from typing import Any, Optional
 from urllib.parse import urlencode
 
-from fastapi import FastAPI, Header, Request, HTTPException
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
-from httpx import AsyncClient
 import asyncpg
+from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import RedirectResponse
+from httpx import AsyncClient
+from pydantic import BaseModel
 
 CLIENT_ID = os.environ['CLIENT_ID']
 CLIENT_SECRET = os.environ['CLIENT_SECRET']
@@ -31,8 +33,10 @@ class Database:
     pool: asyncpg.Pool
 
     @classmethod
-    async def open(cls, url):
+    async def open(cls: type[Database], url: str) -> Database:
         pool = await asyncpg.create_pool(url, min_size=1, max_size=1)
+        if pool is None:
+            raise Exception('failed to get connection pool.')
 
         try:
             sql = """
@@ -54,13 +58,16 @@ class Database:
 
         return cls(pool)
 
-    def __init__(self, pool):
+    def __init__(self: Database, pool: asyncpg.Pool) -> None:
         self.pool = pool
 
-    async def close(self):
+    async def close(self: Database) -> None:
         await self.pool.close()
 
-    async def put_token(self, installation_id: int, token: Token):
+    async def put_token(self: Database,
+                        installation_id: int,
+                        token: Token) -> None:
+
         async with self.pool.acquire() as connection:
             connection: asyncpg.Connection
 
@@ -91,7 +98,7 @@ class Database:
                                          token.refresh_token_expires_in,
                                          token.token_type)
 
-    async def get_token(self, installation_id: int) -> Token:
+    async def get_token(self: Database, installation_id: int) -> Token:
         async with self.pool.acquire() as connection:
             connection: asyncpg.Connection
 
@@ -112,7 +119,7 @@ class Database:
             row = await connection.fetchrow(sql, installation_id)
             if row is not None:
                 return Token(**row)
-        raise Exception("not found.")
+        raise Exception('not found.')
 
 
 class User(BaseModel):
@@ -156,20 +163,20 @@ class Payload(BaseModel):
 app = FastAPI()
 
 
-@app.on_event("startup")
-async def on_startup():
+@app.on_event('startup')
+async def on_startup() -> None:
     global db
     db = await Database.open(DATABASE_URL)
 
 
-@app.on_event("shutdown")
-async def on_shutdown():
+@app.on_event('shutdown')
+async def on_shutdown() -> None:
     await db.close()
 
 
-# ?code=9e7991b2cf5366cd5e93&installation_id=16228562&setup_action=install
-@app.get("/oauth2/callback")
-async def oauth2_callback(code: str, installation_id: int):
+# ?code=xxxxx&installation_id=xxxx&setup_action=install
+@app.get('/oauth2/callback')
+async def oauth2_callback(code: str, installation_id: int) -> RedirectResponse:
     async with AsyncClient() as client:
         data = {
             'client_id': CLIENT_ID,
@@ -190,16 +197,16 @@ async def oauth2_callback(code: str, installation_id: int):
         await db.put_token(installation_id, token)
 
     return RedirectResponse(
-            f"https://github.com/settings/installations/{installation_id}")
+            f'https://github.com/settings/installations/{installation_id}')
 
 
-async def on_ping():
+async def on_ping() -> None:
     pass
 
 
-async def on_pull_request(payload: Payload):
+async def on_pull_request(payload: Payload) -> None:
     if payload.action == 'closed':
-        print("skip")
+        print('skip')
         return
 
     installation_id = payload.installation.id
@@ -231,13 +238,13 @@ async def on_pull_request(payload: Payload):
 
         files = files_response.json()
 
-        def file_added(f):
+        def file_added(f: dict[str, Any]) -> bool:
             return (f['filename'].startswith('.github/workflows')
                     and f['status'] == 'added')
 
         workflow_added = (f for f in files if file_added(f))
         if any(workflow_added):
-            print("detected: workflow added")
+            print('detected: workflow added')
 
             query = {
                 'actor': payload.pull_request.user.login,
@@ -276,25 +283,25 @@ async def on_pull_request(payload: Payload):
                                     close_response.text)
 
 
-async def on_installation():
+async def on_installation() -> None:
     pass
 
 
-def verify_payload(payload: bytes, sig: str):
+def verify_payload(payload: bytes, sig: str) -> bool:
     digest = hmac.new(WEBHOOK_SECRET.encode('utf8'),
                       payload,
                       'sha256').hexdigest()
     return hmac.compare_digest(sig, 'sha256=' + digest)
 
 
-@app.post("/webhook")
+@app.post('/webhook')
 async def post(request: Request,
                payload: Payload,
                x_gitHub_event: str = Header(None),
-               x_hub_signature_256: str = Header(None)):
+               x_hub_signature_256: str = Header(None)) -> Any:
 
     if not verify_payload(await request.body(), x_hub_signature_256):
-        raise HTTPException(422, "signature not verified")
+        raise HTTPException(422, 'signature not verified')
 
     if x_gitHub_event == 'ping':
         return await on_ping()
