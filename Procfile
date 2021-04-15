@@ -1,1 +1,1 @@
-web: pipenv run uvicorn main:app --port $PORT --host 0.0.0.0
+web: pipenv run gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT

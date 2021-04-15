@@ -4,10 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-uvicorn = {extras = ["standard"], version = "*"}
 fastapi = "*"
 httpx = "*"
-aiosqlite = "*"
+asyncpg = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+gunicorn = "*"
 
 [dev-packages]
 

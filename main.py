@@ -6,13 +6,13 @@ from fastapi import FastAPI, Header, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from httpx import AsyncClient
-import aiosqlite
+import asyncpg
 
 CLIENT_ID = os.environ['CLIENT_ID']
 CLIENT_SECRET = os.environ['CLIENT_SECRET']
 WEBHOOK_SECRET = os.environ['WEBHOOK_SECRET']
+DATABASE_URL = os.environ['DATABASE_URL']
 
-database = {}
 db = None
 
 
@@ -25,41 +25,50 @@ class Token(BaseModel):
 
 
 class Database:
-    connection: aiosqlite.Connection
+    pool: asyncpg.Pool
 
     @classmethod
-    async def open(cls, path):
-        connection = await aiosqlite.connect(path)
+    async def open(cls, url):
+        pool = await asyncpg.create_pool(url)
 
         try:
-            await connection.execute("CREATE TABLE IF NOT EXISTS token (id INT, access_token TEXT, expires_in int, refresh_token str, refresh_token_expires_in int, token_type str, primary key (id))")
+            await pool.execute(
+                    "CREATE TABLE IF NOT EXISTS token (id INT, access_token TEXT, expires_in INT, refresh_token TEXT, refresh_token_expires_in INT, token_type TEXT, primary key (id))")
         except:
-            await connection.close()
+            await pool.close()
             raise
 
-        return cls(connection)
+        return cls(pool)
 
-    def __init__(self, connection):
-        self.connection = connection
+    def __init__(self, pool):
+        self.pool = pool
 
     async def close(self):
-        await self.connection.close()
+        await self.pool.close()
 
-    async def put_token(self, installation_id: int, item: Token):
-        token = item.dict() | dict(id=installation_id)
-        async with self.connection.cursor() as cursor:
-            await cursor.execute("UPDATE token SET access_token=:access_token, expires_in=:expires_in, refresh_token=:refresh_token, refresh_token_expires_in=:refresh_token_expires_in, token_type=:token_type WHERE id=:id", token)
-            if not cursor.rowcount:
-                await cursor.execute("INSERT INTO token (id, access_token, expires_in, refresh_token, refresh_token_expires_in, token_type) VALUES (:id, :access_token, :expires_in, :refresh_token, :refresh_token_expires_in, :token_type)", token)
-        await self.connection.commit()
+    async def put_token(self, installation_id: int, token: Token):
+        async with self.pool.acquire() as connection:
+            connection: asyncpg.Connection
+
+            async with connection.transaction():
+                await connection.execute(
+                        "INSERT INTO token(id, access_token, expires_in, refresh_token, refresh_token_expires_in, token_type) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT ON CONSTRAINT token_pkey DO UPDATE SET access_token=$2, expires_in=$3, refresh_token=$4, refresh_token_expires_in=$5, token_type=$6",
+                        installation_id,
+                        token.access_token,
+                        token.expires_in,
+                        token.refresh_token,
+                        token.refresh_token_expires_in,
+                        token.token_type)
 
     async def get_token(self, installation_id: int) -> Token:
-        async with self.connection.cursor() as cursor:
-            await cursor.execute("SELECT id, access_token, expires_in, refresh_token, refresh_token_expires_in, token_type FROM token WHERE id=:id", { 'id': installation_id })
-            row = await cursor.fetchone()
+        async with self.pool.acquire() as connection:
+            connection: asyncpg.Connection
+
+            row = await connection.fetchrow(
+                    "SELECT id, access_token, expires_in, refresh_token, refresh_token_expires_in, token_type FROM token WHERE id=$1",
+                    installation_id)
             if row is not None:
-                id, access_token, expires_in, refresh_token, refresh_token_expires_in, token_type = row
-                return Token(id=id, access_token=access_token, expires_in=expires_in, refresh_token=refresh_token, refresh_token_expires_in=refresh_token_expires_in, token_type=token_type)
+                return Token(**row)
         raise Exception("not found.")
 
 
@@ -107,7 +116,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def on_startup():
     global db
-    db = await Database.open(".db")
+    db = await Database.open(DATABASE_URL)
 
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -196,9 +205,8 @@ async def on_pull_request(payload: Payload):
                 raise HTTPException(close_response.status_code, close_response.text)
 
 
-async def on_installation(payload: Payload):
-    installation_id = payload.installation.id
-    database[installation_id] = {}
+async def on_installation():
+    pass
 
 def verify_payload(payload: bytes, sig: str):
     digest = hmac.new(WEBHOOK_SECRET.encode('utf8'), payload, 'sha256').hexdigest()
@@ -214,6 +222,6 @@ async def post(request: Request, payload: Payload, x_gitHub_event: str = Header(
     elif x_gitHub_event == 'pull_request':
         return await on_pull_request(payload)
     elif x_gitHub_event == 'installation':
-        return await on_installation(payload)
+        return await on_installation()
     else:
         raise HTTPException(422)
