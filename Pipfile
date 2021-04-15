@@ -9,6 +9,7 @@ httpx = "*"
 asyncpg = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 gunicorn = "*"
+flake8 = "*"
 
 [dev-packages]
 
