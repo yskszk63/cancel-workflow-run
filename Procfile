@@ -1,1 +1,1 @@
-web: pipenv run uvicorn main:app
+web: pipenv run uvicorn main:app --port $PORT
