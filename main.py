@@ -3,20 +3,20 @@ from __future__ import annotations
 import hmac
 import os
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 from urllib.parse import urlencode
 
-from fastapi import FastAPI, Header, HTTPException, Request
-from httpx import AsyncClient
 import jwt
+from fastapi import FastAPI, Header, HTTPException, Request, Response
+from fastapi.routing import APIRoute
+from httpx import AsyncClient
 from pydantic import BaseModel
 
 APP_ID = os.environ['APP_ID']
-WEBHOOK_SECRET = os.environ['WEBHOOK_SECRET']
+WEBHOOK_SECRET = os.environb[b'WEBHOOK_SECRET']
 SECRET = os.environ['SECRET']
 
 
-# {'token': 'ghs_1UvhwD3fN3oqRJBhgKnGXOARUxbuwo32iQEa', 'expires_at': '2021-04-16T12:22:37Z', 'permissions': {'actions': 'write', 'metadata': 'read', 'pull_requests': 'write'}, 'repository_selection': 'selected'}
 class AppToken(BaseModel):
     token: str
     expires_at: str
@@ -62,7 +62,28 @@ class Payload(BaseModel):
     sender: Optional[User]
 
 
+class VerifySignatureRoute(APIRoute):
+    def get_route_handler(self: VerifySignatureRoute) -> Callable:
+        original = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            sign = request.headers.get('X-Hub-Signature-256')
+            if sign is None:
+                raise HTTPException(422, 'signature not verified')
+            body = await request.body()
+
+            digest = hmac.new(WEBHOOK_SECRET,
+                              body,
+                              'sha256').hexdigest()
+            if not hmac.compare_digest(sign, 'sha256=' + digest):
+                raise HTTPException(422, 'signature not verified')
+            return await original(request)
+
+        return custom_route_handler
+
+
 app = FastAPI()
+app.router.route_class = VerifySignatureRoute
 
 
 async def on_ping() -> None:
@@ -150,22 +171,8 @@ async def on_installation() -> None:
     pass
 
 
-def verify_payload(payload: bytes, sig: str) -> bool:
-    digest = hmac.new(WEBHOOK_SECRET.encode('utf8'),
-                      payload,
-                      'sha256').hexdigest()
-    return hmac.compare_digest(sig, 'sha256=' + digest)
-
-
-@app.post('/webhook')
-async def post(request: Request,
-               payload: Payload,
-               x_gitHub_event: str = Header(None),
-               x_hub_signature_256: str = Header(None)) -> Any:
-
-    if not verify_payload(await request.body(), x_hub_signature_256):
-        raise HTTPException(422, 'signature not verified')
-
+@app.post('/webhook',)
+async def post(payload: Payload, x_gitHub_event: str = Header(None)) -> Any:
     if x_gitHub_event == 'ping':
         return await on_ping()
     elif x_gitHub_event == 'pull_request':
