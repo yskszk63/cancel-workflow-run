@@ -14,9 +14,9 @@ async def main() -> None:
         sql = """
             CREATE TABLE IF NOT EXISTS token (
                 id INT NOT NULL,
-                access_token TEXT NOT NULL,
+                access_token BYTEA NOT NULL,
                 expires_in INT NOT NULL,
-                refresh_token TEXT NOT NULL,
+                refresh_token BYTEA NOT NULL,
                 refresh_token_expires_in TEXT NOT NULL,
                 token_type TEXT NOT NULL,
                 primary key (id)
@@ -29,5 +29,6 @@ async def main() -> None:
 
     finally:
         await connection.close()
+    print("SUCCESS")
 
 asyncio.run(main())
