@@ -37,28 +37,6 @@ class Database:
         pool = await asyncpg.create_pool(url, min_size=1, max_size=1)
         if pool is None:
             raise Exception('failed to get connection pool.')
-
-        try:
-            sql = """
-                CREATE TABLE IF NOT EXISTS token (
-                    id INT NOT NULL,
-                    access_token TEXT NOT NULL,
-                    expires_in INT NOT NULL,
-                    refresh_token TEXT NOT NULL,
-                    refresh_token_expires_in TEXT NOT NULL,
-                    token_type TEXT NOT NULL,
-                    primary key (id)
-                )
-            """
-            await pool.execute(sql)
-
-            sql = 'CREATE EXTENSION IF NOT EXISTS pgcrypto'
-            await pool.execute(sql)
-
-        except Exception:
-            await pool.close()
-            raise
-
         return cls(pool)
 
     def __init__(self: Database, pool: asyncpg.Pool) -> None:
