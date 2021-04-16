@@ -52,6 +52,9 @@ class Database:
             """
             await pool.execute(sql)
 
+            sql = 'CREATE EXTENSION IF NOT EXISTS pgcrypto'
+            await pool.execute(sql)
+
         except Exception:
             await pool.close()
             raise
