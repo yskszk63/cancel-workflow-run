@@ -17,6 +17,7 @@ WEBHOOK_SECRET = os.environ['WEBHOOK_SECRET']
 DATABASE_URL = os.environ['DATABASE_URL']
 TOKEN_ENDPOINT = os.environ.get('TOKEN_ENDPOINT',
                                 'https://github.com/login/oauth/access_token')
+DATA_SECRET = os.environ['DATA_SECRET']
 
 db = None
 
@@ -61,12 +62,19 @@ class Database:
                         refresh_token,
                         refresh_token_expires_in,
                         token_type
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                    ) VALUES (
+                        $1,
+                        pgp_sym_encrypt($2, $7),
+                        $3,
+                        pgp_sym_encrypt($4, $7),
+                        $5,
+                        $6
+                    )
                     ON CONFLICT ON CONSTRAINT token_pkey DO
                     UPDATE SET
-                        access_token = $2,
+                        access_token = pgp_sym_encrypt($2, $7),
                         expires_in = $3,
-                        refresh_token = $4,
+                        refresh_token = pgp_sym_encrypt($4, $7),
                         refresh_token_expires_in = $5,
                         token_type = $6
                 """
@@ -77,7 +85,8 @@ class Database:
                                          token.expires_in,
                                          token.refresh_token,
                                          token.refresh_token_expires_in,
-                                         token.token_type)
+                                         token.token_type,
+                                         DATA_SECRET)
 
     async def get_token(self: Database, installation_id: int) -> Token:
         async with self.pool.acquire() as connection:
@@ -86,9 +95,9 @@ class Database:
             sql = """
                 SELECT
                     id,
-                    access_token,
+                    pgp_sym_decrypt(access_token, $2) as access_token,
                     expires_in,
-                    refresh_token,
+                    pgp_sym_decrypt(refresh_token, $2) as access_token,
                     refresh_token_expires_in,
                     token_type
                 FROM
@@ -97,7 +106,7 @@ class Database:
                     id = $1
             """
 
-            row = await connection.fetchrow(sql, installation_id)
+            row = await connection.fetchrow(sql, installation_id, DATA_SECRET)
             if row is not None:
                 return Token(**row)
         raise Exception('not found.')
