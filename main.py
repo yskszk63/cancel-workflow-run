@@ -250,7 +250,7 @@ async def on_pull_request(payload: Payload) -> None:
                 'actor': payload.pull_request.user.login,
                 'branch': payload.pull_request.head.ref,
             }
-            url = payload.pull_request.head.repo.url
+            url = payload.repository.url
             url = f'{url}/actions/runs?{urlencode(query)}'
             headers = {
                 'Authorization': f'Bearer {token.access_token}',
