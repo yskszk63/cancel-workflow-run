@@ -97,7 +97,7 @@ class Database:
                     id,
                     pgp_sym_decrypt(access_token, $2) as access_token,
                     expires_in,
-                    pgp_sym_decrypt(refresh_token, $2) as access_token,
+                    pgp_sym_decrypt(refresh_token, $2) as refresh_token,
                     refresh_token_expires_in,
                     token_type
                 FROM
