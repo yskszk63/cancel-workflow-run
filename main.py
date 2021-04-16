@@ -2,114 +2,26 @@ from __future__ import annotations
 
 import hmac
 import os
+import time
 from typing import Any, Optional
 from urllib.parse import urlencode
 
-import asyncpg
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import RedirectResponse
 from httpx import AsyncClient
+import jwt
 from pydantic import BaseModel
 
-CLIENT_ID = os.environ['CLIENT_ID']
-CLIENT_SECRET = os.environ['CLIENT_SECRET']
+APP_ID = os.environ['APP_ID']
 WEBHOOK_SECRET = os.environ['WEBHOOK_SECRET']
-DATABASE_URL = os.environ['DATABASE_URL']
-TOKEN_ENDPOINT = os.environ.get('TOKEN_ENDPOINT',
-                                'https://github.com/login/oauth/access_token')
-DATA_SECRET = os.environ['DATA_SECRET']
-
-db = None
+SECRET = os.environ['SECRET']
 
 
-class Token(BaseModel):
-    access_token: str
-    expires_in: int
-    refresh_token: str
-    refresh_token_expires_in: int
-    token_type: str
-
-
-class Database:
-    pool: asyncpg.Pool
-
-    @classmethod
-    async def open(cls: type[Database], url: str) -> Database:
-        pool = await asyncpg.create_pool(url, min_size=1, max_size=1)
-        if pool is None:
-            raise Exception('failed to get connection pool.')
-        return cls(pool)
-
-    def __init__(self: Database, pool: asyncpg.Pool) -> None:
-        self.pool = pool
-
-    async def close(self: Database) -> None:
-        await self.pool.close()
-
-    async def put_token(self: Database,
-                        installation_id: int,
-                        token: Token) -> None:
-
-        async with self.pool.acquire() as connection:
-            connection: asyncpg.Connection
-
-            async with connection.transaction():
-                sql = """
-                    INSERT INTO token (
-                        id,
-                        access_token,
-                        expires_in,
-                        refresh_token,
-                        refresh_token_expires_in,
-                        token_type
-                    ) VALUES (
-                        $1,
-                        pgp_sym_encrypt($2, $7),
-                        $3,
-                        pgp_sym_encrypt($4, $7),
-                        $5,
-                        $6
-                    )
-                    ON CONFLICT ON CONSTRAINT token_pkey DO
-                    UPDATE SET
-                        access_token = pgp_sym_encrypt($2, $7),
-                        expires_in = $3,
-                        refresh_token = pgp_sym_encrypt($4, $7),
-                        refresh_token_expires_in = $5,
-                        token_type = $6
-                """
-
-                await connection.execute(sql,
-                                         installation_id,
-                                         token.access_token,
-                                         token.expires_in,
-                                         token.refresh_token,
-                                         token.refresh_token_expires_in,
-                                         token.token_type,
-                                         DATA_SECRET)
-
-    async def get_token(self: Database, installation_id: int) -> Token:
-        async with self.pool.acquire() as connection:
-            connection: asyncpg.Connection
-
-            sql = """
-                SELECT
-                    id,
-                    pgp_sym_decrypt(access_token, $2) as access_token,
-                    expires_in,
-                    pgp_sym_decrypt(refresh_token, $2) as refresh_token,
-                    refresh_token_expires_in,
-                    token_type
-                FROM
-                    token
-                WHERE
-                    id = $1
-            """
-
-            row = await connection.fetchrow(sql, installation_id, DATA_SECRET)
-            if row is not None:
-                return Token(**row)
-        raise Exception('not found.')
+# {'token': 'ghs_1UvhwD3fN3oqRJBhgKnGXOARUxbuwo32iQEa', 'expires_at': '2021-04-16T12:22:37Z', 'permissions': {'actions': 'write', 'metadata': 'read', 'pull_requests': 'write'}, 'repository_selection': 'selected'}
+class AppToken(BaseModel):
+    token: str
+    expires_at: str
+    permissions: dict[str, str]
+    repository_selection: str
 
 
 class User(BaseModel):
@@ -147,47 +59,10 @@ class Payload(BaseModel):
     repository: Optional[Repository]
     organization: Optional[Organization]
     installation: Optional[Installation]
-    sender: User
+    sender: Optional[User]
 
 
 app = FastAPI()
-
-
-@app.on_event('startup')
-async def on_startup() -> None:
-    global db
-    db = await Database.open(DATABASE_URL)
-
-
-@app.on_event('shutdown')
-async def on_shutdown() -> None:
-    await db.close()
-
-
-# ?code=xxxxx&installation_id=xxxx&setup_action=install
-@app.get('/oauth2/callback')
-async def oauth2_callback(code: str, installation_id: int) -> RedirectResponse:
-    async with AsyncClient() as client:
-        data = {
-            'client_id': CLIENT_ID,
-            'client_secret': CLIENT_SECRET,
-            'code': code,
-        }
-        headers = {
-            'Accept': 'application/json',
-        }
-        response = await client.post(TOKEN_ENDPOINT,
-                                     data=data,
-                                     headers=headers)
-        if response.is_error:
-            raise HTTPException(response.status_code, response.text)
-
-        token = response.json()
-        token = Token(**token)
-        await db.put_token(installation_id, token)
-
-    return RedirectResponse(
-            f'https://github.com/settings/installations/{installation_id}')
 
 
 async def on_ping() -> None:
@@ -199,27 +74,25 @@ async def on_pull_request(payload: Payload) -> None:
         print('skip')
         return
 
-    installation_id = payload.installation.id
-    token = await db.get_token(installation_id)
-    refresh_token = token.refresh_token
+    now = int(time.time())
+    jwt_payload = {
+        'iat': now,
+        'exp': now + (60 * 5),
+        'iss': APP_ID,
+    }
+    jwt_token = jwt.encode(jwt_payload, SECRET, 'RS256')
 
     async with AsyncClient() as client:
-        data = {
-            'refresh_token': refresh_token,
-            'grant_type': 'refresh_token',
-            'client_id': CLIENT_ID,
-            'client_secret': CLIENT_SECRET,
-        }
         headers = {
-            'Accept': 'application/json',
+            'Authorization': f'Bearer {jwt_token}',
+            'Accept': 'application/vnd.github.v3+json',
         }
-        response = await client.post(TOKEN_ENDPOINT,
-                                     data=data,
-                                     headers=headers)
-        if response.is_error:
-            raise HTTPException(response.status_code, response.text)
-        token = Token(**response.json())
-        await db.put_token(installation_id, token)
+        url = f'https://api.github.com/app/installations/{payload.installation.id}/access_tokens'
+        token_response = await client.post(url, headers=headers)
+        if token_response.is_error:
+            raise HTTPException(token_response.status_code,
+                                token_response.text)
+        token = AppToken(**token_response.json())
 
         files_response = await client.get(f'{payload.pull_request.url}/files')
         if files_response.is_error:
@@ -243,7 +116,7 @@ async def on_pull_request(payload: Payload) -> None:
             url = payload.repository.url
             url = f'{url}/actions/runs?{urlencode(query)}'
             headers = {
-                'Authorization': f'Bearer {token.access_token}',
+                'Authorization': f'Bearer {token.token}',
                 'Accept': 'application/vnd.github.v3+json',
             }
             workflows = await client.get(url, headers=headers)

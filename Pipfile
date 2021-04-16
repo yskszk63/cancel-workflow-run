@@ -6,9 +6,10 @@ name = "pypi"
 [packages]
 fastapi = "*"
 httpx = "*"
-asyncpg = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 gunicorn = "*"
+pyjwt = "*"
+cryptography = "*"
 
 [dev-packages]
 flake8 = "*"
