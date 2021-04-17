@@ -103,6 +103,7 @@ class PullRequest(BaseModel):
 class Payload(BaseModel):
     action: Optional[str]
     number: Optional[int]
+    workflow_run: Optional[WorkflowRun]
     pull_request: Optional[PullRequest]
     repository: Optional[Repository]
     organization: Optional[Organization]
@@ -123,10 +124,21 @@ class PrFile(BaseModel):
         return self.status == 'added'
 
 
+class WorkflowRunPr(BaseModel):
+    number: int
+
+
 class WorkflowRun(BaseModel):
+    id: int
+    workflow_url: str
     url: str
     head_sha: str
     status: str
+    pull_requests: list[WorkflowRunPr]
+
+
+class Workflow(BaseModel):
+    path: str
 
 
 class VerifySignatureRoute(APIRoute):
@@ -241,6 +253,7 @@ async def get_repository(client: AsyncClient,
     response = await call_as_app(client, f'/repos/{name}', 'get', token)
     return Repository(**response)
 
+
 async def get_pr(client: AsyncClient,
                  token: AppToken,
                  repo_name: str,
@@ -248,6 +261,7 @@ async def get_pr(client: AsyncClient,
 
     response = await call_as_app(client, f'/repos/{repo_name}/pulls/{pr_num}', 'get', token)
     return PullRequest(**response)
+
 
 async def list_pr_files(client: AsyncClient,
                         token: AppToken,
@@ -289,6 +303,15 @@ async def iter_workflow_runs(client: AsyncClient,
         yield WorkflowRun(**run)
 
 
+async def get_workflow_run(client: AsyncClient,
+                           token: AppToken,
+                           repo: Repository,
+                           run_id: int) -> WorkflowRun:
+    url = f'{repo.url}/actions/runs/{run_id}'
+    result = await call_as_app(client, url, 'get', token)
+    return WorkflowRun(**result)
+
+
 async def cancel_workflow(client: AsyncClient,
                           token: AppToken,
                           run: WorkflowRun) -> None:
@@ -298,6 +321,14 @@ async def cancel_workflow(client: AsyncClient,
         await call_as_app(client, url, 'post', token)
     except Exception as err:
         logger.warning(err)
+
+
+async def get_workflow_for_run(client: AsyncClient,
+                               token: AppToken,
+                               run: WorkflowRun) -> Workflow:
+    url = run.workflow_url
+    result = await call_as_app(client, url, 'get', token)
+    return Workflow(**result)
 
 
 app = FastAPI()
@@ -322,6 +353,24 @@ async def on_pull_request(payload: Payload) -> JSONResponse:
         raise HTTPException(400)
 
     asyncio.create_task(reject_pr(payload.installation.id, repository.full_name, pull_request.number))
+    return JSONResponse(status_code=201)
+
+
+async def on_workflow_run(payload: Payload) -> JSONResponse:
+    if payload.action == 'completed':
+        logger.debug('skip')
+        return JSONResponse(status_code=200)
+
+    repository = payload.repository
+    if repository is None:
+        raise HTTPException(400)
+
+    workflow_run = payload.workflow_run
+    if workflow_run is None:
+        raise HTTPException(400)
+
+    pr_nums = [r.number for r in workflow_run.pull_requests]
+    asyncio.create_task(cancel_run(payload.installation.id, repository.full_name, workflow_run.id, pr_nums))
     return JSONResponse(status_code=201)
 
 
@@ -363,8 +412,26 @@ async def reject_pr(installation_id: int, repo_name: str, pr_num: int) -> None:
             await close_pr(client, token, pr)
 
 
+async def cancel_run(installation_id: int, repo_name: str, run_id: int, pr_nums: list[int]) -> None:
+    async with AsyncClient() as client:
+        token = await get_token(client, installation_id)
+
+        repo = await get_repository(client, token, repo_name)
+        run = await get_workflow_run(client, token, repo, run_id)
+        workflow = await get_workflow_for_run(client, token, run)
+        for pr_num in pr_nums:
+            pr = await get_pr(client, token, repo_name, pr_num)
+            for pr_file in await list_pr_files(client, token, pr):
+                if pr_file.filename == workflow.path and pr_file.is_added:
+                    await cancel_workflow(client, token, run)
+
+                    comment = 'Sorry. Could not accept workflow added.'
+                    await comment_pr(client, token, pr, comment)
+                    await close_pr(client, token, pr)
+
+
 if __name__ == '__main__':
     import sys
 
-    installation_id, repository, pr_num = sys.argv[1:]
-    asyncio.run(reject_pr(int(installation_id), repository, int(pr_num)))
+    installation_id, repository, run_id, *pr_nums = sys.argv[1:]
+    asyncio.run(cancel_run(int(installation_id), repository, int(run_id), [int(i) for i in pr_nums]))
