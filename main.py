@@ -354,6 +354,7 @@ async def reject_pr(installation_id: int, repo_name: str, pr_num: int) -> None:
             logger.debug('detected: workflow added')
 
             async for run in iter_workflow_runs(client, token, repo, pr):
+                logger.debug(f'{run.head_sha} {pr.head.sha} {run.status}')
                 if run.head_sha == pr.head.sha and run.status != 'completed':
                     await cancel_workflow(client, token, run)
 
