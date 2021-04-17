@@ -21,4 +21,4 @@ flake8-annotations = "*"
 python_version = "3.9"
 
 [scripts]
-run = "pipenv run uvicorn main:app --reload"
+run = "pipenv run uvicorn main:app --reload --log-level=debug"
