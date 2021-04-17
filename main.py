@@ -4,10 +4,8 @@ import asyncio
 import hmac
 import logging
 import os
-import re
 import time
-from typing import Any, AsyncGenerator, Callable, Optional
-from urllib.parse import urlencode
+from typing import Any, Callable, Optional
 
 import jwt
 from fastapi import FastAPI, Header, HTTPException, Request, Response
@@ -22,44 +20,8 @@ SECRET = os.environ['SECRET']
 GITHUB_ENDPOINT = os.environ.get('GITHUB_ENDPOINT',
                                  'https://api.github.com')
 
-# <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=2>; rel="next", ...
-link_header_pattern = re.compile(r'^<(?P<url>[^>]*)>(?:\s*;\s*(?P<attrs>(?:[^=]*="[^"]*"(?:\s*;\s*[^=]*="[^"]*")*)))?(?:\s*,\s*|$)')
-# rel="next"; ..
-attr_pattern = re.compile(r'^(?P<name>[^=]*)="(?P<val>[^"]*)"(?:\s*;\s*|$)')
-
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
-
-
-class Link(BaseModel):
-    url: str
-    attrs: dict[str, str]
-
-
-def iter_attr(target):
-    while len(target):
-        match = attr_pattern.match(target)
-        if not match:
-            return
-
-        yield match.group('name'), match.group('val')
-        target = target[match.end():]
-
-
-def iter_links(target):
-    while len(target):
-        match = link_header_pattern.match(target)
-        if not match:
-            return
-
-        attrs = dict(iter_attr(match.group('attrs')))
-        yield Link(url=match.group('url'), attrs=attrs)
-        target = target[match.end():]
-
-
-def link_header_by_rel(target):
-    return { l.attrs['rel']: l for l in iter_links(target) if 'rel' in l.attrs }
 
 
 class AppToken(BaseModel):
@@ -78,35 +40,18 @@ class Repository(BaseModel):
     url: str
 
 
-class Ref(BaseModel):
-    ref: str
-    repo: Repository
-    sha: str
-
-
-class Organization(BaseModel):
-    pass
-
-
 class Installation(BaseModel):
     id: int
 
 
 class PullRequest(BaseModel):
-    number: int
     url: str
     issue_url: str
-    user: User
-    head: Ref
 
 
 class PrFile(BaseModel):
     filename: str
     status: str
-
-    @property
-    def is_workflow(self: PrFile) -> bool:
-        return self.filename.startswith('.github/workflows')
 
     @property
     def is_added(self: PrFile) -> bool:
@@ -118,11 +63,9 @@ class WorkflowRunPr(BaseModel):
 
 
 class WorkflowRun(BaseModel):
-    id: int
-    workflow_url: str
     url: str
-    head_sha: str
-    status: str
+    workflow_url: str
+    id: int
     pull_requests: list[WorkflowRunPr]
 
 
@@ -132,13 +75,9 @@ class Workflow(BaseModel):
 
 class Payload(BaseModel):
     action: Optional[str]
-    number: Optional[int]
     workflow_run: Optional[WorkflowRun]
-    pull_request: Optional[PullRequest]
     repository: Optional[Repository]
-    organization: Optional[Organization]
     installation: Optional[Installation]
-    sender: Optional[User]
 
 
 class VerifySignatureRoute(APIRoute):
@@ -215,37 +154,6 @@ async def call_as_app(client: AsyncClient,
     return response.json()
 
 
-async def iter_as_app(client: AsyncClient,
-                      url: str,
-                      token: AppToken,
-                      key: str) -> AsyncGenerator[Any, None]:
-
-    headers = {
-        'Authorization': f'Bearer {token.token}',
-        'Accept': 'application/vnd.github.v3+json',
-    }
-
-    if url.startswith('/'):
-        url = f'{GITHUB_ENDPOINT}{url}'
-    logger.debug(f'call: get {url}')
-    while True:
-        response = await client.get(url, headers=headers)
-        try:
-            response.raise_for_status()
-        except HTTPStatusError:
-            logger.warning(response.text)
-            raise
-
-        for item in response.json()[key]:
-            yield item
-
-        try:
-            links = response.headers['link']
-            url = link_header_by_rel(links)['next'].url
-        except KeyError:
-            return
-
-
 async def get_repository(client: AsyncClient,
                          token: AppToken,
                          name: str) -> Any:
@@ -279,28 +187,6 @@ async def comment_pr(client: AsyncClient,
 
     url = f'{pr.issue_url}/comments'
     await call_as_app(client, url, 'post', token, json={'body': comment})
-
-
-async def close_pr(client: AsyncClient,
-                   token: AppToken,
-                   pr: PullRequest) -> None:
-
-    await call_as_app(client, pr.url, 'post', token, json={'state': 'closed'})
-
-
-async def iter_workflow_runs(client: AsyncClient,
-                             token: AppToken,
-                             repo: Repository,
-                             pr: PullRequest) -> AsyncGenerator[WorkflowRun, None]:
-
-    params = {
-        'actor': pr.user.login,
-        'branch': pr.head.ref,
-    }
-    url = f'{repo.url}/actions/runs?{urlencode(params)}'
-
-    async for run in iter_as_app(client, url, token, 'workflow_runs'):
-        yield WorkflowRun(**run)
 
 
 async def get_workflow_run(client: AsyncClient,
@@ -339,23 +225,6 @@ async def on_ping() -> None:
     pass
 
 
-async def on_pull_request(payload: Payload) -> JSONResponse:
-    if payload.action == 'closed':
-        print('skip')
-        return JSONResponse(status_code=200)
-
-    pull_request = payload.pull_request
-    if pull_request is None:
-        raise HTTPException(400)
-
-    repository = payload.repository
-    if repository is None:
-        raise HTTPException(400)
-
-    asyncio.create_task(reject_pr(payload.installation.id, repository.full_name, pull_request.number))
-    return JSONResponse(status_code=201)
-
-
 async def on_workflow_run(payload: Payload) -> JSONResponse:
     if payload.action == 'completed':
         logger.debug('skip')
@@ -384,34 +253,10 @@ async def post(payload: Payload, x_gitHub_event: str = Header(None)) -> Any:
         return await on_ping()
     elif x_gitHub_event == 'workflow_run':
         return await on_workflow_run(payload)
-    elif x_gitHub_event == 'pull_request':
-        return await on_pull_request(payload)
     elif x_gitHub_event == 'installation':
         return await on_installation()
     else:
         raise HTTPException(422)
-
-
-async def reject_pr(installation_id: int, repo_name: str, pr_num: int) -> None:
-    async with AsyncClient() as client:
-        token = await get_token(client, installation_id)
-
-        repo = await get_repository(client, token, repo_name)
-        pr = await get_pr(client, token, repo_name, pr_num)
-
-        change_files = await list_pr_files(client, token, pr)
-        workflow_added = [f for f in change_files if f.is_workflow and f.is_added]
-        if len(workflow_added):
-            logger.debug('detected: workflow added')
-
-            async for run in iter_workflow_runs(client, token, repo, pr):
-                logger.debug(f'{run.head_sha} {pr.head.sha} {run.status}')
-                if run.head_sha == pr.head.sha and run.status != 'completed':
-                    await cancel_workflow(client, token, run)
-
-            comment = 'Sorry. Could not accept workflow added.'
-            await comment_pr(client, token, pr, comment)
-            await close_pr(client, token, pr)
 
 
 async def cancel_run(installation_id: int, repo_name: str, run_id: int, pr_nums: list[int]) -> None:
@@ -429,7 +274,6 @@ async def cancel_run(installation_id: int, repo_name: str, run_id: int, pr_nums:
 
                     comment = 'Sorry. Could not accept workflow added.'
                     await comment_pr(client, token, pr, comment)
-                    await close_pr(client, token, pr)
 
 
 if __name__ == '__main__':
