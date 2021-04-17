@@ -100,17 +100,6 @@ class PullRequest(BaseModel):
     head: Ref
 
 
-class Payload(BaseModel):
-    action: Optional[str]
-    number: Optional[int]
-    workflow_run: Optional[WorkflowRun]
-    pull_request: Optional[PullRequest]
-    repository: Optional[Repository]
-    organization: Optional[Organization]
-    installation: Optional[Installation]
-    sender: Optional[User]
-
-
 class PrFile(BaseModel):
     filename: str
     status: str
@@ -139,6 +128,17 @@ class WorkflowRun(BaseModel):
 
 class Workflow(BaseModel):
     path: str
+
+
+class Payload(BaseModel):
+    action: Optional[str]
+    number: Optional[int]
+    workflow_run: Optional[WorkflowRun]
+    pull_request: Optional[PullRequest]
+    repository: Optional[Repository]
+    organization: Optional[Organization]
+    installation: Optional[Installation]
+    sender: Optional[User]
 
 
 class VerifySignatureRoute(APIRoute):
