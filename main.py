@@ -382,6 +382,8 @@ async def on_installation() -> None:
 async def post(payload: Payload, x_gitHub_event: str = Header(None)) -> Any:
     if x_gitHub_event == 'ping':
         return await on_ping()
+    elif x_gitHub_event == 'workflow_run':
+        return await on_workflow_run(payload)
     elif x_gitHub_event == 'pull_request':
         return await on_pull_request(payload)
     elif x_gitHub_event == 'installation':
