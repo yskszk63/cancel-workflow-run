@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
+comment_template = '''@{opener} @{owner}
+Hi, I'm a bot.
+
+Sorry, [This workflow run]({run_url}) is canceled.
+Because currently could not accept added at pull request.
+'''
+
+
 class AppToken(BaseModel):
     token: str
     expires_at: str
@@ -38,6 +46,7 @@ class User(BaseModel):
 class Repository(BaseModel):
     full_name: str
     url: str
+    owner: User
 
 
 class Installation(BaseModel):
@@ -47,6 +56,7 @@ class Installation(BaseModel):
 class PullRequest(BaseModel):
     url: str
     issue_url: str
+    user: User
 
 
 class PrFile(BaseModel):
@@ -64,6 +74,7 @@ class WorkflowRunPr(BaseModel):
 
 class WorkflowRun(BaseModel):
     url: str
+    html_url: str
     workflow_url: str
     id: int
     pull_requests: list[WorkflowRunPr]
@@ -81,7 +92,7 @@ class Payload(BaseModel):
 
 
 class VerifySignatureRoute(APIRoute):
-    def get_route_handler(self: VerifySignatureRoute) -> Callable:
+    def get_route_handler(self) -> Callable:
         original = super().get_route_handler()
 
         async def custom_route_handler(request: Request) -> Response:
@@ -272,7 +283,9 @@ async def cancel_run(installation_id: int, repo_name: str, run_id: int, pr_nums:
                 if pr_file.filename == workflow.path and pr_file.is_added:
                     await cancel_workflow(client, token, run)
 
-                    comment = 'Sorry. Could not accept workflow added.'
+                    comment = comment_template.format(run_url=run.html_url,
+                                                      opener=pr.user.login,
+                                                      owner=repo.owner.login)
                     await comment_pr(client, token, pr, comment)
 
 
