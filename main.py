@@ -24,15 +24,16 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-comment_template = '''@{opener} @{owner}
+comment_template = """@{opener} @{owner}
 Hi, I'm a bot.
 
 Sorry, [This workflow run]({run_url}) is canceled.
 Because currently could not accept added at pull request.
-'''
+"""
 
 
 class AppToken(BaseModel):
+    """GitHub Apps Token"""
     token: str
     expires_at: str
     permissions: dict[str, str]
@@ -40,26 +41,31 @@ class AppToken(BaseModel):
 
 
 class User(BaseModel):
+    """Represent GitHub User."""
     login: str
 
 
 class Repository(BaseModel):
+    """Represent GitHub Repository"""
     full_name: str
     url: str
     owner: User
 
 
 class Installation(BaseModel):
+    """Represent GitHub Apps Installation"""
     id: int
 
 
 class PullRequest(BaseModel):
+    """Represent GitHub Pull Request"""
     url: str
     issue_url: str
     user: User
 
 
 class PrFile(BaseModel):
+    """Represent GitHub Pull Request File"""
     filename: str
     status: str
 
@@ -69,10 +75,12 @@ class PrFile(BaseModel):
 
 
 class WorkflowRunPr(BaseModel):
+    """Represent GitHub Pull Request for Workflow Run"""
     number: int
 
 
 class WorkflowRun(BaseModel):
+    """Represent GitHub Actions Workflow Run"""
     url: str
     html_url: str
     workflow_url: str
@@ -81,10 +89,12 @@ class WorkflowRun(BaseModel):
 
 
 class Workflow(BaseModel):
+    """Represent GitHub Actions Workflow"""
     path: str
 
 
 class Payload(BaseModel):
+    """GitHub Webhook Payload"""
     action: Optional[str]
     workflow_run: Optional[WorkflowRun]
     repository: Optional[Repository]
@@ -92,7 +102,9 @@ class Payload(BaseModel):
 
 
 class VerifySignatureRoute(APIRoute):
-    def get_route_handler(self) -> Callable:
+    """Verify GitHub Webhook Payload Signature"""
+
+    def get_route_handler(self: VerifySignatureRoute) -> Callable:
         original = super().get_route_handler()
 
         async def custom_route_handler(request: Request) -> Response:
@@ -112,6 +124,8 @@ class VerifySignatureRoute(APIRoute):
 
 
 async def get_token(client: AsyncClient, installation_id: int) -> AppToken:
+    """Get GitHub Apps token."""
+
     now = int(time.time())
 
     jwt_payload = {
@@ -148,6 +162,8 @@ async def call_as_app(client: AsyncClient,
                       token: AppToken,
                       *,
                       json: Any = None) -> Any:
+    """Call GitHub v3 API for GitHub Apps."""
+
     headers = {
         'Authorization': f'Bearer {token.token}',
         'Accept': 'application/vnd.github.v3+json',
@@ -168,6 +184,7 @@ async def call_as_app(client: AsyncClient,
 async def get_repository(client: AsyncClient,
                          token: AppToken,
                          name: str) -> Any:
+    """Get a repository by name"""
 
     response = await call_as_app(client, f'/repos/{name}', 'get', token)
     return Repository(**response)
@@ -177,14 +194,19 @@ async def get_pr(client: AsyncClient,
                  token: AppToken,
                  repo_name: str,
                  pr_num: int) -> PullRequest:
+    """Get a pull request by repository name and pull request number"""
 
-    response = await call_as_app(client, f'/repos/{repo_name}/pulls/{pr_num}', 'get', token)
+    response = await call_as_app(client,
+                                 f'/repos/{repo_name}/pulls/{pr_num}',
+                                 'get',
+                                 token)
     return PullRequest(**response)
 
 
 async def list_pr_files(client: AsyncClient,
                         token: AppToken,
                         pull_request: PullRequest) -> list[PrFile]:
+    """List pull request files by pull request"""
 
     url = f'{pull_request.url}/files'
     response = await call_as_app(client, url, 'get', token)
@@ -195,6 +217,7 @@ async def comment_pr(client: AsyncClient,
                      token: AppToken,
                      pr: PullRequest,
                      comment: str) -> None:
+    """Add comment for pull request."""
 
     url = f'{pr.issue_url}/comments'
     await call_as_app(client, url, 'post', token, json={'body': comment})
@@ -204,6 +227,8 @@ async def get_workflow_run(client: AsyncClient,
                            token: AppToken,
                            repo: Repository,
                            run_id: int) -> WorkflowRun:
+    """Get workflow run by repository name and run id"""
+
     url = f'{repo.url}/actions/runs/{run_id}'
     result = await call_as_app(client, url, 'get', token)
     return WorkflowRun(**result)
@@ -212,6 +237,7 @@ async def get_workflow_run(client: AsyncClient,
 async def cancel_workflow(client: AsyncClient,
                           token: AppToken,
                           run: WorkflowRun) -> None:
+    """Cancel workflow run"""
 
     url = f'{run.url}/cancel'
     try:
@@ -223,6 +249,8 @@ async def cancel_workflow(client: AsyncClient,
 async def get_workflow_for_run(client: AsyncClient,
                                token: AppToken,
                                run: WorkflowRun) -> Workflow:
+    """Get workflow by workflow run"""
+
     url = run.workflow_url
     result = await call_as_app(client, url, 'get', token)
     return Workflow(**result)
@@ -233,10 +261,13 @@ app.router.route_class = VerifySignatureRoute
 
 
 async def on_ping() -> None:
+    """on ping webhook event"""
     pass
 
 
 async def on_workflow_run(payload: Payload) -> JSONResponse:
+    """on workflow run webhook event"""
+
     if payload.action == 'completed':
         logger.debug('skip')
         return JSONResponse(status_code=200)
@@ -250,16 +281,22 @@ async def on_workflow_run(payload: Payload) -> JSONResponse:
         raise HTTPException(400)
 
     pr_nums = [r.number for r in workflow_run.pull_requests]
-    asyncio.create_task(cancel_run(payload.installation.id, repository.full_name, workflow_run.id, pr_nums))
+    asyncio.create_task(cancel_run(payload.installation.id,
+                                   repository.full_name,
+                                   workflow_run.id,
+                                   pr_nums))
     return JSONResponse(status_code=201)
 
 
 async def on_installation() -> None:
+    """on installation webhook event"""
     pass
 
 
 @app.post('/webhook')
 async def post(payload: Payload, x_gitHub_event: str = Header(None)) -> Any:
+    """on webhook event"""
+
     if x_gitHub_event == 'ping':
         return await on_ping()
     elif x_gitHub_event == 'workflow_run':
@@ -270,7 +307,12 @@ async def post(payload: Payload, x_gitHub_event: str = Header(None)) -> Any:
         raise HTTPException(422)
 
 
-async def cancel_run(installation_id: int, repo_name: str, run_id: int, pr_nums: list[int]) -> None:
+async def cancel_run(installation_id: int,
+                     repo_name: str,
+                     run_id: int,
+                     pr_nums: list[int]) -> None:
+    """process workflow run"""
+
     async with AsyncClient() as client:
         token = await get_token(client, installation_id)
 
@@ -293,4 +335,7 @@ if __name__ == '__main__':
     import sys
 
     installation_id, repository, run_id, *pr_nums = sys.argv[1:]
-    asyncio.run(cancel_run(int(installation_id), repository, int(run_id), [int(i) for i in pr_nums]))
+    asyncio.run(cancel_run(int(installation_id),
+                           repository,
+                           int(run_id),
+                           [int(i) for i in pr_nums]))
