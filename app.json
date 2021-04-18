@@ -4,13 +4,16 @@
     "repository": "https://github.com/yskszk63/cancel-workflow-run",
     "env": {
         "APP_ID": {
-            "description": "GitHub Apps App ID"
+            "description": "GitHub Apps App ID (Must fill after create github apps.)",
+            "required": false
         },
         "WEBHOOK_SECRET": {
-            "description": "GitHub Apps Webook secret"
+            "description": "GitHub Apps Webook secret (Must fill after create github apps.)",
+            "required": false
         },
         "SECRET": {
-            "description": "GitHub Apps Private key"
+            "description": "GitHub Apps Private key (Must fill after create github apps.)",
+            "required": false
         }
     }
 }
