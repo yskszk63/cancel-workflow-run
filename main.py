@@ -29,6 +29,8 @@ Hi, I'm a bot.
 
 Sorry, [This workflow run]({run_url}) is canceled.
 Because currently could not accept added at pull request.
+
+If needed, please re-run [workflow run]({run_url}).
 """
 
 
