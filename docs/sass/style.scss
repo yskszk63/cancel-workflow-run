@@ -1,0 +1,24 @@
+.hero h1 {
+    font-size: 10vw;
+}
+
+form[name=appnew] div {
+    white-space: nowrap;
+}
+
+pre#heroku-conf {
+    white-space: pre-wrap;
+    position: relative;
+}
+
+pre#heroku-conf #copy-heroku-cli {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    cursor: pointer;
+    transition: all 0.1s ease-in;
+}
+
+pre#heroku-conf #copy-heroku-cli:active {
+    opacity: 0.5;
+}
