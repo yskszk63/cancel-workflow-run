@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# local.settings.json
+# -------------------
+# /Values
+#     "AzureFunctionsJobHost__customHandler__description__defaultExecutablePath": "app-dev"
+exec go run .

@@ -1,5 +1,4 @@
-.db
 .env
 .vim
-*.pem
 public/
+local.settings.json
