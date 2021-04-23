@@ -13,6 +13,7 @@ jobs:
         CGO_ENABLED: '0'
         GOOS: linux
         GOARCH: amd64
+    - run: ldd app
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
       with:
