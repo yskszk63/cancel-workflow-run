@@ -13,10 +13,18 @@ jobs:
         CGO_ENABLED: '0'
         GOOS: linux
         GOARCH: amd64
-    - run: file app
-    - name: 'Run Azure Functions Action'
-      uses: Azure/functions-action@v1
-      with:
-        app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
-        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+    - name: Install Azure Functions Core Tools
+      run: |
+        wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+    - name: Login Azure
+      run: az login --service-principal --username "$APP_ID" --password "$PASSWORD" --tenant "$TENANT_ID"
+      env:
+        APP_ID: ${{ secrets.AZURE_SP_APP_ID }}
+        PASSWORD: ${{ secrets.AZURE_SP_PASSWORD }}
+        TENANT_ID: ${{ secrets.AZURE_SP_TENANT_ID }}
+    - name: Deploy
+      run: func azure functionapp publish "$AZURE_FUNCTION_NAME"
+      env:
+        AZURE_FUNCTION_NAME: ${{ secrets.AZURE_FUNCTION_NAME }}
 # vim:set ts=2 sw=2 sts=2:
