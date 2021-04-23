@@ -2,8 +2,9 @@ name: deploy
 on: push
 
 jobs:
-  deploy:
+  test-deploy:
     runs-on: "ubuntu-latest"
+    environment: Test
     steps:
     - uses: actions/checkout@v2
     - name: Build
