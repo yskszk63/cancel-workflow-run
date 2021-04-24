@@ -1,12 +1,22 @@
-// https://aka.ms/bicepdemo#eJyNklFLwzAUhd/zK/IgZAOXrn2SgqAviqAvDhSfJEtvZ9iaxJtkE8f+u8nayLCCQqHJyb0n3z1tUdA3762ri2KpJNgGOsM/q4rvYMmlQeA7pRuzc1yDLwixAkVHN0YKr4ymzqPSK3pJEZwJKOEWTbCTKc8VhGwFUie06CCWMSfO9kGr9wCLY+vkZ6Nqpgd2bGoFdrmtVdj1qrA2i3HpGCHZId5C2YOSaJxpPV94g2IFhevf11KaoL27quZVOZunh0WTPaE0+dUDY9xm9Pp7FcV1TKGmbDB9qljU3DrUR4NsEY+FbgQ2r/ePi1RxIIcTvjTQKeEzLAsHuAVMJ4msvJjNqxFZDuIPtjZomZQYy+90L+WYKWU4YlIeBppynNPwAf4Pc75ROnykqy0aC+gVuEzWj38TB7xr+kHjD9BDfgEuu9iF
-// https://aka.ms/bicepdemo#eJyVUm1r2zAQ/u5foQ8FJZDYeYGxeQRWOm90XdMRp+2glKDI50zEkTy9JF2D99t3Suw0rGWjYNDp7tFzzz2+KCI/rC1NHEVzwaHMYKXCx8Eg3MA85EpDuBEyUxsTSrBREJRMsxUpFGdWKEmM1UIuyIhoMMppDp+1cmWrHTaIIFgzTUoNuXhAGB3mw36esz7d5Q2TbAU+b9jJdo+qTrZOip8O0h13629mkbWr/WtWls1zDM3rCIImjSIIvRRcK6NyG6ZWabaAyOzPU86Vk9Z8GPQG/W7PfxQbbgNCfO+4HgGvzcTxIcLkEs2LCa1JbwYUc2bp4h1BQ4FlJjOms9nXSeoRVVAd6fOzHSu8hXlkhAWvqf+223+uqTbmP6JyJ7nPILpTCOkefOtSqxK0FWAajb7VmZK5WDQZ4hukYC26i7C7OkkO5aPRTh+dBlT8Rc1N7QI9Qq1Z4RDGlUR1LfoRcuYKm8isVAJd/6aVVVwVo92Ovq9/xhipR7SD1oe+S4fQpnIBv3yhEMaHpvWEQKvedXtvvFXtcIm1u959uOvePsip/jXIp+vx2fT8apzObq8mF8lkNrkeT88vkxemodzh9qzoa4mT79NknGI4u0km/nyJ+/fwOe998HTDtQG9BvzBVjvYL9MfqJwvMQ==
+// https://aka.ms/bicepdemo#eJzVVl9v2kgQf/en2IdIC1JsE3qNWk6RQlM3oVyAw6S5U1VZiz3AFrPr211Dk4j77DdrY6ANvdJ7OwmZ9c7Mb/7P2PfJzJhMt3x/zGPIElhI77HZ9FYw9mKpwFtxkciV9gQY3/F37ImMtbfgsZJaTgzyLvzPzP2c+ewxV1A+3UkuYsOl0P725HIxUUwblcfGsjDtxjIBx7lMQMeKZ5arRq+5ucnHpJ1l2j4ITzzSL2gs9cg4N6QHkGiSMgOK1p2MKbYgLMt4QhCciym5IJQ6lxpiVFOrf4P/hmk4/4WAsMoTsq9uoPgSUUkXHo7RiZGaSTmPUJECc5TyfW33pTgJC/FjFB5Q5CyZIqmMmZXFKwVa5iqGayXzrFb3KlLBlymY8C9WMGYihnQ1UbQgaCbYAixBs5Onkm198pQL/lcOYaGu9i0yT+rrUhpjX4njUf88ABfaVAj2/N8QDJumXMwRJJYCva7RGU8SEK69bdHTZ7HhySmhfqbkkiegtH+7rWlMja+5Ae2j2Ma9uuNUABgvQnfcoZGKTcHX5X87jmUujL5sNppnbsP+KBr15BBicVqbaONrlZzW9oSXc2y7FqEb0A9Nind6nrcKgAoCyUwkTCXRb8PQcqyd9Z59Nhz7FnaE5tOZ0T42ayYFlNadvXQbL59ZVyXjB/Zh8Vu9GHRdmUZPnvbysKbINdxYVJpIsAJlBspw2AphK6S8BI9GDxnsoL92yVbWvkvbFFlHXrlnz8O8ydsP/KjGE3Kfotn5F3rQTKvqSooJn1Y3xCoIwRisTGT7uLkkW/Jettp2JqLF7+VYbxJL97iWLM2RrSrbtzBheWoCkWSSY6oGShoZy/SimMC/buqrh9AXWJ6aeVYLlnJFwfFlCSnX9qhrOw4M1Wu3cW5DVffmSPvY+OQV2utbc9b/5si7u97VqNPvhdF9f9gNhtHwrjfq3AYHvKFxjg2xoD8LHPwxCnohHqMPwdD+H8L++8WRuO3BoINo1zejMMLDaHh3G/RGbauqG/x5ABoHDyhcDrCdNp2kRnfrjj9vJTskqq6pl1GuOqtuWw833gL5isLDhBxn+H3wJuyMAhvg6N2wfxsN2lfd9vXBSFebecrNLB8XG/lBz/Xj/PyFX056dyXVfJLKlaty4StIAbegxlW+EqlkiW/3jDZ+xuI51qb3yLMj4/t7DnY8FyWN/SGgaKZyXv8/SxwrJuq8PWB78YlxdPJu+v1uFAZXw2B0AOvrT4fjQL8L9h2QT87uDWsZ1BJw4GExQjlc/wGulRSK
 // https://bicepdemo.z22.web.core.windows.net/
+// https://docs.microsoft.com/ja-jp/azure/azure-functions/functions-infrastructure-as-code
 
-param location string = resourceGroup().location
+@description('GitHub Apps App id. Optional. but Needs later')
+param appid string = ''
+@secure()
+@description('Base64 encoded GitHub Apps Private Key. Optional. but Needs later')
+param webhook_secret string = ''
+@secure()
+@description('GitHub Apps Webhook Secret. Optional. but Needs later')
+param secret string = ''
 
-var prefix = '3f31ffa1'
+var location = resourceGroup().location
+var prefix = 'cancelwfr'
 var saname = 'sa${prefix}${uniqueString(resourceGroup().id)}'
 var appname = 'apps${prefix}${uniqueString(resourceGroup().id)}'
+var instname = 'inst${prefix}${uniqueString(resourceGroup().id)}'
+var insttaglink = concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', appname)
 
 resource sa 'Microsoft.Storage/storageAccounts@2021-01-01' = {
   name: saname
@@ -14,6 +24,18 @@ resource sa 'Microsoft.Storage/storageAccounts@2021-01-01' = {
   kind: 'StorageV2'
   sku: {
     name: 'Standard_LRS'
+  }
+}
+
+resource inst 'Microsoft.Insights/components@2015-05-01' = {
+  name: instname
+  location: location
+  kind: 'web'
+  tags: {
+    '${insttaglink}': 'Resource'
+  }
+  properties: {
+    Application_Type: 'web'
   }
 }
 
@@ -35,6 +57,30 @@ resource apps 'Microsoft.Web/sites@2018-11-01' = {
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~3'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: reference(resourceId('microsoft.insights/components/', instname), '2015-05-01').InstrumentationKey
+        }
+        {
+          name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: 'https://github.com/yskszk63/cancel-workflow-run/releases/download/latest/package.zip'
+        }
+        {
+          name: 'QueueStorageConnectionString'
+          value: concat('DefaultEndpointsProtocol=https;AccountName=', sa.name, ';AccountKey=', listKeys(sa.name, '2019-06-01').keys[0].value)
+        }
+        {
+          name: 'APP_ID'
+          value: appid
+        }
+        {
+          name: 'WEBHOOK_SECRET'
+          value: webhook_secret
+        }
+        {
+          name: 'SECRET'
+          value: secret
         }
       ]
     }
