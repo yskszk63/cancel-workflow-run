@@ -9,6 +9,14 @@ jobs:
     - uses: actions/checkout@v2
     - name: Package
       run: make package.zip
+    - name: Push PreRelease
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Development Build"
+        files: package.zip
 
     - name: Build
       run: go build -a -o app
