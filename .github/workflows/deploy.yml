@@ -22,7 +22,7 @@ jobs:
     environment: Test
     runs-on: "ubuntu-latest"
     steps:
-      name: Sync trigger
+    - name: Sync trigger
       run: curl -XPOST "https://$APP_NAME.azurewebsites.net/admin/host/synctriggers?code=${API_KEY}"
       env:
         APP_NAME: ${{ secrets.AZURE_FUNCTION_NAME }}
