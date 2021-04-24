@@ -100,8 +100,12 @@ func hello(c echo.Context) error {
 
 func webhook(c echo.Context) error {
 	env := c.Get("Env").(*Env)
+	webhookSecret, err := env.WebhookSecret()
+	if err != nil {
+		return err
+	}
 
-	payload, err := github.ValidatePayload(c.Request(), env.WebhookSecret)
+	payload, err := github.ValidatePayload(c.Request(), webhookSecret)
 	if err != nil {
 		return err
 	}
@@ -154,6 +158,14 @@ func webhook(c echo.Context) error {
 
 func process(c echo.Context) error {
 	env := c.Get("Env").(*Env)
+	appId, err := env.AppId()
+	if err != nil {
+		return err
+	}
+	secret, err := env.Secret()
+	if err != nil {
+		return err
+	}
 
 	request := new(InvokeRequest)
 	if err := c.Bind(request); err != nil {
@@ -166,7 +178,7 @@ func process(c echo.Context) error {
 	}
 
 	transport := http.DefaultTransport
-	installationTransport, err := ghinstallation.New(transport, env.AppId, msg.InstallationId, env.Secret)
+	installationTransport, err := ghinstallation.New(transport, appId, msg.InstallationId, secret)
 	if err != nil {
 		return err
 	}
@@ -300,33 +312,41 @@ func AzureFunctionsHttp(name string) echo.MiddlewareFunc {
 	}
 }
 
-type Env struct {
-	Port          string
-	AppId         int64
-	WebhookSecret []byte
-	Secret        []byte
+type Env struct {}
+
+func NewEnv() *Env {
+	return &Env{}
 }
 
-func NewEnv() (*Env, error) {
+func (_ *Env) Port() string {
 	port, exists := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT")
 	if !exists {
 		port = "8080"
 	}
+	return port
+}
 
+func (*Env) AppId() (int64, error) {
 	appId, present := os.LookupEnv("APP_ID")
 	if !present {
-		return nil, fmt.Errorf("no APP_ID specified.")
+		return 0, fmt.Errorf("no APP_ID specified.")
 	}
 	appIdInt, err := strconv.ParseInt(appId, 10, 64)
-	if !present {
-		return nil, fmt.Errorf("incorrect APP_ID")
+	if err != nil {
+		return 0, fmt.Errorf("incorrect APP_ID")
 	}
+	return appIdInt, nil
+}
 
+func (*Env) WebhookSecret() ([]byte, error) {
 	webhookSecret, present := os.LookupEnv("WEBHOOK_SECRET")
 	if !present {
 		return nil, fmt.Errorf("no WEBHOOK_SECRET specified.")
 	}
+	return []byte(webhookSecret), nil
+}
 
+func (*Env) Secret() ([]byte, error) {
 	secretBase64, present := os.LookupEnv("SECRET")
 	if !present {
 		return nil, fmt.Errorf("no SECRET specified.")
@@ -336,12 +356,7 @@ func NewEnv() (*Env, error) {
 		return nil, fmt.Errorf("incorrect SECRET.")
 	}
 
-	return &Env{
-		Port:          port,
-		AppId:         appIdInt,
-		WebhookSecret: []byte(webhookSecret),
-		Secret:        secret,
-	}, nil
+	return []byte(secret), nil
 }
 
 func (e *Env) InjectEnv(next echo.HandlerFunc) echo.HandlerFunc {
@@ -352,10 +367,7 @@ func (e *Env) InjectEnv(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func main() {
-	env, err := NewEnv()
-	if err != nil {
-		panic(err)
-	}
+	env := NewEnv()
 
 	e := echo.New()
 	e.Debug = true
@@ -377,7 +389,7 @@ func main() {
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 
-	e.Logger.Fatal(e.Start(":" + env.Port))
+	e.Logger.Fatal(e.Start(":" + env.Port()))
 }
 
 // vim:set noet:
