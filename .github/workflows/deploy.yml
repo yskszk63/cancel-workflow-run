@@ -26,7 +26,7 @@ jobs:
         PASSWORD: ${{ secrets.AZURE_SP_PASSWORD }}
         TENANT_ID: ${{ secrets.AZURE_SP_TENANT_ID }}
     - name: Deploy
-      run: func azure functionapp publish "$AZURE_FUNCTION_NAME"
+      run: func azure functionapp publish "$AZURE_FUNCTION_NAME" --custom
       env:
         AZURE_FUNCTION_NAME: ${{ secrets.AZURE_FUNCTION_NAME }}
 # vim:set ts=2 sw=2 sts=2:
