@@ -1,7 +1,7 @@
 package: package.zip
 
 package.zip: app host.json hello/function.json process/function.json webhook/function.json
-	mkdir -p package{,/hello,process,webhook}
+	mkdir -p package/{,hello,process,webhook}
 	cp app host.json package
 	cp hello/function.json package/hello
 	cp process/function.json package/process
