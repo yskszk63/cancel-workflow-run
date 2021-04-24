@@ -1,0 +1,121 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.3.255.40792",
+      "templateHash": "8406366489552219893"
+    }
+  },
+  "parameters": {
+    "appid": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Apps App id. Optional. but Needs later"
+      }
+    },
+    "webhook_secret": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Base64 encoded GitHub Apps Private Key. Optional. but Needs later"
+      }
+    },
+    "secret": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Apps Webhook Secret. Optional. but Needs later"
+      }
+    }
+  },
+  "functions": [],
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "prefix": "cancelwfr",
+    "saname": "[format('sa{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]",
+    "appname": "[format('apps{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]",
+    "instname": "[format('inst{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]",
+    "insttaglink": "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appname'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-01-01",
+      "name": "[variables('saname')]",
+      "location": "[variables('location')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2015-05-01",
+      "name": "[variables('instname')]",
+      "location": "[variables('location')]",
+      "kind": "web",
+      "tags": {
+        "[variables('insttaglink')]": "Resource"
+      },
+      "properties": {
+        "Application_Type": "web"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2018-11-01",
+      "name": "[variables('appname')]",
+      "location": "[variables('location')]",
+      "kind": "functionapp,linux",
+      "properties": {
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('saname'), ';AccountKey=', listKeys(variables('saname'), '2019-06-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "custom"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('instname')), '2015-05-01').InstrumentationKey]"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "https://github.com/yskszk63/cancel-workflow-run/releases/download/latest/package.zip"
+            },
+            {
+              "name": "QueueStorageConnectionString",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('saname'), ';AccountKey=', listKeys(variables('saname'), '2019-06-01').keys[0].value)]"
+            },
+            {
+              "name": "APP_ID",
+              "value": "[parameters('appid')]"
+            },
+            {
+              "name": "WEBHOOK_SECRET",
+              "value": "[parameters('webhook_secret')]"
+            },
+            {
+              "name": "SECRET",
+              "value": "[parameters('secret')]"
+            }
+          ]
+        },
+        "reserved": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('saname'))]"
+      ]
+    }
+  ]
+}
