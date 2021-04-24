@@ -7,26 +7,33 @@ jobs:
     environment: Test
     steps:
     - uses: actions/checkout@v2
+    - name: Package
+      run: make package.zip
+
     - name: Build
       run: go build -a -o app
       env:
         CGO_ENABLED: '0'
         GOOS: linux
         GOARCH: amd64
+      if: ${{ false }}
     - name: Install Azure Functions Core Tools
       run: |
         wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
         sudo dpkg -i packages-microsoft-prod.deb
         sudo apt-get update
         sudo apt-get install azure-functions-core-tools-3 -y
+      if: ${{ false }}
     - name: Login Azure
       run: az login --service-principal --username "$APP_ID" --password "$PASSWORD" --tenant "$TENANT_ID"
       env:
         APP_ID: ${{ secrets.AZURE_SP_APP_ID }}
         PASSWORD: ${{ secrets.AZURE_SP_PASSWORD }}
         TENANT_ID: ${{ secrets.AZURE_SP_TENANT_ID }}
+      if: ${{ false }}
     - name: Deploy
       run: func azure functionapp publish "$AZURE_FUNCTION_NAME" --custom
       env:
         AZURE_FUNCTION_NAME: ${{ secrets.AZURE_FUNCTION_NAME }}
+      if: ${{ false }}
 # vim:set ts=2 sw=2 sts=2:
