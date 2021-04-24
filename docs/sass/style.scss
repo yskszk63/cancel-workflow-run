@@ -6,12 +6,12 @@ form[name=appnew] div {
     white-space: nowrap;
 }
 
-pre#heroku-conf {
+pre#conf {
     white-space: pre-wrap;
     position: relative;
 }
 
-pre#heroku-conf #copy-heroku-cli {
+pre#conf #copy-cli {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
@@ -19,6 +19,6 @@ pre#heroku-conf #copy-heroku-cli {
     transition: all 0.1s ease-in;
 }
 
-pre#heroku-conf #copy-heroku-cli:active {
+pre#conf #copy-cli:active {
     opacity: 0.5;
 }

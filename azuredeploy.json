@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.3.255.40792",
-      "templateHash": "8406366489552219893"
+      "templateHash": "9764479704306030714"
     }
   },
   "parameters": {
@@ -117,5 +117,11 @@
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saname'))]"
       ]
     }
-  ]
+  ],
+  "outputs": {
+    "appname": {
+      "type": "string",
+      "value": "[variables('appname')]"
+    }
+  }
 }

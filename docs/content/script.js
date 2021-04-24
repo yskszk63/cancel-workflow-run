@@ -2,12 +2,12 @@ const GITHUB_WEB_ENDPOINT = "https://github.com";
 const GITHUB_API_ENDPOINT = "https://api.github.com";
 
 const $form = document.querySelector('form[name=appnew]');
-const $herokuEndpoint = document.querySelector('[name=heroku-endpoint]');
-const $pre = document.querySelector('#heroku-conf-code');
+const $afendpoint = document.querySelector('[name=af-endpoint]');
+const $pre = document.querySelector('#conf-code');
 const ghapp = sessionStorage.getItem("ghapp");
-const herokuAppname = sessionStorage.getItem("heroku-appname");
+const afappname = sessionStorage.getItem("af-appname");
 
-const copyButton = new ClipboardJS('#copy-heroku-cli', {
+const copyButton = new ClipboardJS('#copy-cli', {
     text(trigger) {
         return trigger.parentElement.querySelector('code').textContent;
     }
@@ -22,7 +22,7 @@ $form.addEventListener('submit', evt => {
       "name": "Cancel workflow run.",
       "url": url,
       "hook_attributes": {
-        "url": `https://${$herokuEndpoint.value}.herokuapp.com/webhook`,
+        "url": `https://${$afendpoint.value}.azurewebsites.net/api/webhook`,
       },
       "redirect_url": url,
       "public": false,
@@ -35,18 +35,18 @@ $form.addEventListener('submit', evt => {
         "workflow_run"
       ]
     };
-    sessionStorage.setItem('heroku-appname', $herokuEndpoint.value);
+    sessionStorage.setItem('af-appname', $afendpoint.value);
     evt.target.querySelector('[name=manifest]').value = JSON.stringify(manifest);
     evt.target.action = new URL('/settings/apps/new?state=abc123', GITHUB_WEB_ENDPOINT);
 });
 
-if (!!herokuAppname) {
-    $herokuEndpoint.value = herokuAppname;
+if (!!afappname) {
+    $afendpoint.value = afappname;
 }
 
-if (!!ghapp && !!herokuAppname) {
+if (!!ghapp && !!afappname) {
     const {app_id, webhook_secret, secret} = JSON.parse(ghapp);
-    $pre.textContent = `heroku config:set -a ${herokuAppname} -e APP_ID=${app_id} -e WEBHOOK_SECRET=${webhook_secret} -e SECRET=${JSON.stringify(secret)}`;
+    $pre.textContent = `heroku config:set -a ${afappname} -e APP_ID=${app_id} -e WEBHOOK_SECRET=${webhook_secret} -e SECRET=${JSON.stringify(secret)}`;
 }
 
 if (!!window.location.search) {
