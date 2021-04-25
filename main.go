@@ -6,7 +6,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 
+	_ "embed"
+	"time"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -16,8 +19,29 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"text/template"
+	"net/url"
 )
+
+func ParseConnectionString(s string) (*string, *string, error) {
+	var account *string
+	var key *string
+	for _, kv := range strings.Split(s, ";") {
+		kv := strings.SplitN(kv, "=", 2)
+		k, v := kv[0], kv[1]
+		switch k {
+		case "AccountName":
+			account = &v
+		case "AccountKey":
+			key = &v
+		}
+	}
+	if account == nil || key == nil {
+		return nil, nil, fmt.Errorf("no AccountName or AccountKey")
+	}
+	return account, key, nil
+}
 
 type HttpTriggerBinding struct {
 	Url        string                   `json:"Url,omitempty"`
@@ -50,8 +74,9 @@ func (i *InvokeRequest) Bind(name string, m interface{}) error {
 }
 
 type HttpBindingOutput struct {
-	Status int    `json:"Status"`
-	Body   string `json:"Body"`
+	Status  int               `json:"Status"`
+	Body    string            `json:"Body"`
+	Headers map[string]string `json:"Headers"`
 }
 
 type InvokeResponse struct {
@@ -94,8 +119,192 @@ If needed, please re-run [This Workflow Run]({{.RunUrl}})`
 	return &r, nil
 }
 
+type GitHubAppsManifestHookAttrs struct {
+	Url    string `json:"url"`
+	Active bool   `json:"active,omitempty"`
+}
+
+type GitHubAppsManifest struct {
+	Name               string                         `json:"name,omitempty"`
+	Url                string                         `json:"url"`
+	HookAttrs          GitHubAppsManifestHookAttrs    `json:"hook_attributes,omitempty"`
+	RedirectUrl        string                         `json:"redirect_url,omitempty"`
+	CallbackUrls       []string                       `json:"callback_urls,omitempty"`
+	Description        string                         `json:"description,omitempty"`
+	Public             bool                           `json:"public,omitempty"`
+	DefaultEvents      []string                       `json:"default_events,omitempty"`
+	DefaultPermissions github.InstallationPermissions `json:"default_permissions,omitempty"`
+}
+
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
+}
+
+func install_github_app(c echo.Context) error {
+	if c.Request().URL.Query().Get("code") != "" {
+		return post_install_github_app(c)
+	}
+
+	env := c.Get("Env").(*Env)
+	connStr, err := env.StorageConnectionString()
+	if err != nil {
+		return err
+	}
+
+	account, key, err := ParseConnectionString(*connStr)
+	if err != nil {
+		return err
+	}
+	container, blob := "install", "azuredeploy.json"
+
+	cred, err := azblob.NewSharedKeyCredential(*account, *key)
+	if err != nil {
+		panic(err)
+	}
+
+	rawconurl, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", *account, container))
+	if err != nil {
+		panic(err)
+	}
+	conurl := azblob.NewContainerURL(*rawconurl, azblob.NewPipeline(cred, azblob.PipelineOptions{}))
+	_, err = conurl.Create(context.Background(), azblob.Metadata{}, azblob.PublicAccessNone)
+	if err != nil && err.(azblob.StorageError).ServiceCode() != azblob.ServiceCodeContainerAlreadyExists {
+		panic(err)
+	}
+
+	sas, err := azblob.BlobSASSignatureValues{
+		Protocol:      azblob.SASProtocolHTTPS,
+		ExpiryTime:    time.Now().UTC().Add(15 * time.Minute),
+		ContainerName: container,
+		BlobName:      blob,
+		Permissions:   azblob.BlobSASPermissions{Write: true}.String(),
+	}.NewSASQueryParameters(cred)
+	if err != nil {
+		panic(err)
+	}
+	bloburl := conurl.NewBlockBlobURL(blob).URL()
+	bloburl.RawQuery = sas.Encode()
+	state := bloburl.String()
+
+	webhookUrl := *c.Request().URL
+	webhookUrl.Path = "/api/webhook"
+
+	redirecturl := c.Request().URL
+	redirecturl.RawQuery = ""
+
+	write := "write"
+	read := "read"
+	// https://docs.github.com/en/developers/apps/creating-a-github-app-from-a-manifest
+	manifest := GitHubAppsManifest{
+		Name:        "CancelWorkflowRun",
+		Url:         redirecturl.String(),
+		RedirectUrl: redirecturl.String(),
+		HookAttrs: GitHubAppsManifestHookAttrs{
+			Url: webhookUrl.String(),
+		},
+		Public:        false,
+		DefaultEvents: []string{"workflow_run"},
+		DefaultPermissions: github.InstallationPermissions{
+			Actions:      &write,
+			PullRequests: &write,
+			Metadata:     &read,
+		},
+	}
+	manifestJson, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	html := `<form action="https://github.com/settings/apps/new" method="POST">
+	<textarea name="manifest" hidden>{{.Manifest}}</textarea>
+	<input type="hidden" name="state" value="{{.State}}" />
+</form>
+<script>document.querySelector("form").submit()</script>`
+	_ = manifestJson
+
+	t, err := template.New("Html").Parse(html)
+	if err != nil {
+		return err
+	}
+
+	s := struct {
+		Manifest string
+		State    string
+	}{
+		Manifest: string(manifestJson),
+		State:    state,
+	}
+	buf := bytes.NewBufferString("")
+	t.Execute(buf, s)
+
+	return c.HTML(http.StatusOK, buf.String())
+}
+
+//go:embed templates/install.json
+var installTemplate []byte
+
+func post_install_github_app(c echo.Context) error {
+	code := c.Request().URL.Query().Get("code")
+	state := c.Request().URL.Query().Get("state")
+	fmt.Printf("**** %s\n", state)
+
+	env := c.Get("Env").(*Env)
+	connStr, err := env.StorageConnectionString()
+	if err != nil {
+		return err
+	}
+
+	account, key, err := ParseConnectionString(*connStr)
+	if err != nil {
+		return err
+	}
+
+	rawurl, err := url.Parse(state)
+	if err != nil {
+		return err
+	}
+	bloburl := azblob.NewBlockBlobURL(*rawurl, azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}))
+
+	client := github.NewClient(nil)
+	appconf, _, err := client.Apps.CompleteAppManifest(context.Background(), code)
+	if err != nil {
+		return err
+	}
+
+	app_id := appconf.GetID()
+	webhookSecret := appconf.GetWebhookSecret()
+	secret := appconf.GetPEM()
+	secretb64 := base64.StdEncoding.EncodeToString([]byte(secret))
+
+	deployjson := fmt.Sprintf(string(installTemplate), app_id, webhookSecret, secretb64)
+	_, err = azblob.UploadBufferToBlockBlob(context.Background(), []byte(deployjson), bloburl, azblob.UploadToBlockBlobOptions{})
+	if err != nil {
+		return err
+	}
+
+	parts := azblob.NewBlobURLParts(bloburl.URL())
+	fmt.Printf("%s %s\n", parts.ContainerName, parts.BlobName)
+	cred, err := azblob.NewSharedKeyCredential(*account, *key)
+	if err != nil {
+		panic(err)
+	}
+	sas, err := azblob.BlobSASSignatureValues{
+		Protocol:      azblob.SASProtocolHTTPS,
+		ExpiryTime:    time.Now().UTC().Add(15 * time.Minute),
+		ContainerName: parts.ContainerName,
+		BlobName:      parts.BlobName,
+		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
+	}.NewSASQueryParameters(cred)
+	if err != nil {
+		panic(err)
+	}
+
+	refurl := bloburl.URL()
+	refurl.RawQuery = sas.Encode()
+
+	deployurl := fmt.Sprintf("https://portal.azure.com/#create/Microsoft.Template/uri/%s", url.QueryEscape(refurl.String()))
+
+	return c.Redirect(http.StatusFound, deployurl)
 }
 
 func webhook(c echo.Context) error {
@@ -292,6 +501,7 @@ func AzureFunctionsHttp(name string) echo.MiddlewareFunc {
 				Body:      bytes.NewBuffer([]byte{}),
 			}
 			newCtx := c.Echo().NewContext(newReq, &writer)
+			newCtx.Set("AzureRequest", request)
 			if err := next(&ProxyContext{Context: newCtx, Parent: c}); err != nil {
 				return err
 			}
@@ -300,10 +510,18 @@ func AzureFunctionsHttp(name string) echo.MiddlewareFunc {
 			if !ok {
 				Outputs = map[string]interface{}{}
 			}
+			headers := map[string]string{}
+			for key, val := range newCtx.Response().Header() {
+				for _, v := range val {
+					headers[key] = v
+				}
+			}
+
 			invokeResponse := InvokeResponse{
 				ReturnValue: HttpBindingOutput{
-					Status: writer.StatusCode,
-					Body:   writer.Body.String(),
+					Status:  writer.StatusCode,
+					Body:    writer.Body.String(),
+					Headers: headers,
 				},
 				Outputs: Outputs,
 			}
@@ -312,7 +530,7 @@ func AzureFunctionsHttp(name string) echo.MiddlewareFunc {
 	}
 }
 
-type Env struct {}
+type Env struct{}
 
 func NewEnv() *Env {
 	return &Env{}
@@ -359,6 +577,14 @@ func (*Env) Secret() ([]byte, error) {
 	return []byte(secret), nil
 }
 
+func (*Env) StorageConnectionString() (*string, error) {
+	connStr, present := os.LookupEnv("AzureWebJobsStorage")
+	if !present {
+		return nil, fmt.Errorf("no AzureWebJobsStorage found.")
+	}
+	return &connStr, nil
+}
+
 func (e *Env) InjectEnv(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Set("Env", e)
@@ -385,6 +611,7 @@ func main() {
 	}))
 
 	e.POST("/hello", hello, AzureFunctionsHttp("req"))
+	e.POST("/install_github_app", install_github_app, AzureFunctionsHttp("req"))
 	e.POST("/webhook", webhook, AzureFunctionsHttp("req"))
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })

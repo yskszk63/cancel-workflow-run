@@ -10,6 +10,14 @@
       ]
     },
     {
+      "name": "env",
+      "type": "blob",
+      "dataType": "string",
+      "path": "env/env.json",
+      "connection": "AzureWebJobsStorage",
+      "direction": "in"
+    },
+    {
       "type": "queue",
       "direction": "out",
       "name": "msg",
