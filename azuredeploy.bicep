@@ -1,4 +1,4 @@
-//https://aka.ms/bicepdemo#eJzVVm1v2kgQ/u5fsR8iGaTYJvQatZwihaZuQrkAh0lzp6qyFnuALWbXty/QJOJ++83aGGhDe/S+nYTMemfmmfcZBwGZaZ2rVhCMWQJ5CgvhPzab/grGfiIk+CvGU7FSPgcdOMGOPRWJ8hcskUKJiUbeRfCZep/zgD4aCeXTmxieaCa4CrYnj/GJpEpLk2jLQpWXiBQc5zIFlUiWW66ae830jRmTdp4r+yAs9Um/oNHMJ2OjSQ8gVSSjGqRbd3Iq6YLQPGcpQXDGp+SCuK5zqSBBNbX6N/hvqILzXwhwqzwl++oGki0RlXTh4RidGKmZEPMYFUnQRynf13ZfipOoED9G4QFFzpJKkomEWlm8kqCEkQlcS2HyWt2vSAVfLmHCvljBhPIEstVEugVBUU4XYAmKnjyVbOuTJ8PZXwaiQl3tW2SW1telNMa+Esej+nkAxpWuEOz5vyFoOs0YnyNIIjh6XXNnLE2Be/a25Z4+iw1LT4kb5FIsWQpSBbfbmsbUBIppUAGKbdyrO44wOsfUVP5u87C5cJxKAwaUuDu4SAtJpxCo8r+dJMJwrS6bjeaZ17A/F1GeHEIsTGuTDnytstfanvByjn3ZIu4G9EPTxTs1N60CoIJAMuUplWn82zCyHGtnvWefjde+hR2u2HSmVYDdnAsOpXVnL73Gy2fWVdn6F/uwO6xezIqqTHNPnvYStXaRa7ixqDSRYImKHKRmsBXCXslYCR6PHnLYQX/tki29fZe2ObSOvPLOnoe5StuP/ajmF3Kfotnmi3vQTKvqSvAJm1Y3xCqIQGssEmT7uLkkW/Jettp2aKLF78VYbRLr7nEtaWaQrarrtzChJtMhT3PBMFUDKbRIRHZRjOhfN/XVQ+gLrF9FfasFa72i4HyzhIwpe1S1HQeG6rXXOLehqvtzpH1sfPIL7fWtOesfOfLurnc16vR7UXzfH3bDYTy86406t+EBb9zEYEMs3J8FDv8Yhb0Ij/GHcGj/D2H//eJI3PZg0EG065tRFONhNLy7DXujtlXVDf88AI2TCSRuD9iOo05ac3f7kD1vJTtFqq6pl1GuOqtuWw9X4gL5isLDhBxn+H34JuqMQhvg+N2wfxsP2lfd9vXBSFere8r0zIyLlf2g5upxfv4iKFeBtxJyPsnEypOGBxIywDWpcNeveCZoGthFpHSQ02SOtek/svzI+P5uwM7voqSxPzgUzVQO9P9niWPFxJ23B2wvvkGOTt5Nv9+No/BqGI4OYH39bXEc6HfBvgPyydm9YS2DXAIOPCxGKIfrP3O/IGc= 
+// https://aka.ms/bicepdemo#eJzVVm1z4jYQ/u5foQ+ZMczEdpLrZVo6mQmX8yWUBlIgl3ZuMh5hLaDDSK4kh7wM/e1d2djAxZfSfquHwbJ29exqd5+VgoDMjEl1KwjGPIaUwUL6zycn/hLGfiwV+EsumFxqX4AJnGCjzmSs/QWPldRyYlB3EXyl3tc0oM+ZguLfm2QiNlwKHVQjj4uJotqoLDZWhWovlgwc55yBjhVPrVbDveTmKhuTdppq+0c480k/l9HEJ+PMkB4A0yShBpTbdFKq6ILQNOWMIDgXU3JGXNc51xCjmUbzG/wPVMPpDwSENc7ItrkbxR8QlXThaR+bGKmZlPMIDSkwexnftnZXLCfDfPk+BmsMOQ9UkUTG1K7FKQVaZiqGSyWztNH0S1GulyqY8Ee7MKYihmQ5UW4u0FTQBViBpgcvhdrq4CUT/M8Mhrm5xrfInDVXxWqMfbkch/rfA3ChTYlgx/8NwdBpwsUcQWIpcNcNd8YZA+HZ2ZZ7+Co2nB0SN0iVfOAMlA6uq5rG1ASaG9ABLltvr+k4MjMppqbcb5WH9YTjlBYwoMTdwA2NVHQKgS7e7TiWmTD6/OTo5Ng7sj8XUV4cQixMa50O/Cyz16pGODlHXraIuwb9fOLinJ5nrRyghEAxFYwqFv06GFqNlbPa8m+cyPEeHgZWbwjqATtEnbuVtYOXwudVwGBCs8S4uRRjm4IyHHTpHcHkqK2v4nuQJVblSzVJthTsQ5NELoH1FZ9iqnc17eOWzSmVyiCF8iZkW5O7o3hfB3oNZiZZHehlOHpr/YI+tqfQEUhgKSzA8Y4YHlOpgV0BtdWF8LXW68WralzOFjO7WbRVv53FjtB8OsO04cZTKaCoseP33tH7VzVWcu4fqgx7nA0BcqtKGiZ7i24rF7UGa4+KQqvLO3a8hBfg0egphQ307pZsA9neUsVEu5EfvePXZCnJ9/Y+ylMItQ/R7ezRrXXTmrqQYsKnmxLFJUMwBqm+UyPbBbpmQdtWHXr8ixzrNaO26+eBJhmqld3pY8GUULBUckzVjZJGxjI5y2v55zUHewh9hl1IU99awY5VSvCUsoKEazvUjY0Ghuon7+jUhqrpz1H25ejez603K3dWb23k023vYtTp94bRXX/QDQfR4LY36lyHNbtx4wybxhbP9gQOfx+FvSEOo8/hwL7rsP96tydu++amg2iXV6NhhIPR4PY67I3a1lQ3/KMGGs8XUHgHgOpQ6bCGu7nV8NdUsmdByZpmEeWSWU1LPbzYLFAvLzxMyH6O34Ufhp1RaAMcfRr0r6Ob9kW3fVkb6bLHTbmZZeP84vWk5/p5fvouKA50bynVfIJ9xVOZCBQkgJcdjTe2pUgkZYG9TmgTpDSeY236zzzdM76/ZWBP4bykkR8CcjIVx/L/s8SxYqLOxxrf85vk3sm76ve70TC8GOweFWus3RvifqDfBfsOyL2z+cJaxsMasOFhMULRXP8GTCCVkw==
 // https://bicepdemo.z22.web.core.windows.net/
 // https://docs.microsoft.com/ja-jp/azure/azure-functions/functions-infrastructure-as-code
 
@@ -27,6 +27,27 @@ resource sa 'Microsoft.Storage/storageAccounts@2021-01-01' = {
   sku: {
     name: 'Standard_LRS'
   }
+}
+
+resource blob 'Microsoft.Storage/storageAccounts/blobServices@2021-01-01' = {
+    name: '${saname}/default'
+    properties: {
+      cors: {
+        corsRules: [
+          {
+            allowedOrigins: [
+              'https://portal.azure.com'
+            ]
+            allowedMethods: [
+              'GET'
+            ]
+            maxAgeInSeconds: 1
+            exposedHeaders: []
+            allowedHeaders: []
+          }
+        ]
+      }
+    }
 }
 
 resource inst 'Microsoft.Insights/components@2015-05-01' = {

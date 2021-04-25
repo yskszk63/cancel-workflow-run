@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.3.255.40792",
-      "templateHash": "9764479704306030714"
+      "templateHash": "12043323931761101654"
     }
   },
   "parameters": {
@@ -49,6 +49,28 @@
       "kind": "StorageV2",
       "sku": {
         "name": "Standard_LRS"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-01-01",
+      "name": "[format('{0}/default', variables('saname'))]",
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": [
+                "https://portal.azure.com"
+              ],
+              "allowedMethods": [
+                "GET"
+              ],
+              "maxAgeInSeconds": 1,
+              "exposedHeaders": [],
+              "allowedHeaders": []
+            }
+          ]
+        }
       }
     },
     {
