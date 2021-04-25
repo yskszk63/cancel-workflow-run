@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.3.255.40792",
-      "templateHash": "6417402585632880366"
+      "templateHash": "13666687805015520237"
     }
   },
   "parameters": {
@@ -150,7 +150,7 @@
     },
     "setup_url": {
       "type": "string",
-      "value": "[format('https://{0}.azurewebsites.net/api/hello', variables('appname'))]"
+      "value": "[format('https://{0}.azurewebsites.net/api/install_github_app', variables('appname'))]"
     }
   }
 }
