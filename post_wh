@@ -1,0 +1,14 @@
+#!/bin/bash
+
+dir=$(dirname $0)
+dir=$(cd $dir && pwd)
+
+. $dir/.env
+
+file=$1
+[ x"$file" = x ] && { echo "usage: %prog <file>"; exit -1; }
+name=$(basename $file .json)
+
+sig=$(hmac256 $WEBHOOK_SECRET $file|cut -d' ' -f1)
+
+curl localhost:7071/api/webhook --data-binary @$file -H"X-Hub-Signature-256:sha256=$sig" -H"X-GitHub-Event:$name" -H'Content-Type:application/json'

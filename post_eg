@@ -1,0 +1,9 @@
+#!/bin/bash
+
+dir=$(dirname $0)
+dir=$(cd $dir && pwd)
+
+file=$1
+[ x"$file" = x ] && { echo "usage: %prog <file>"; exit -1; }
+
+curl localhost:7071/runtime/webhooks/eventgrid?functionName=process --data-binary @$file -H"aeg-event-type:Notification" -H'Content-Type:application/json'

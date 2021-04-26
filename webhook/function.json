@@ -10,19 +10,11 @@
       ]
     },
     {
-      "name": "env",
-      "type": "blob",
-      "dataType": "string",
-      "path": "env/env.json",
-      "connection": "AzureWebJobsStorage",
-      "direction": "in"
-    },
-    {
-      "type": "queue",
+      "type": "eventGrid",
       "direction": "out",
       "name": "msg",
-      "queueName": "outqueue",
-      "connection": "QueueStorageConnectionString"
+      "topicEndpointUri": "EventGridUri",
+      "topicKeySetting": "EventGridKey"
     },
     {
       "type": "http",

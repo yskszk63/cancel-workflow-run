@@ -1,0 +1,22 @@
+{
+  "zen": "Keep it logically awesome.",
+  "hook_id": 292377714,
+  "hook": {
+    "type": "App",
+    "id": 292377714,
+    "name": "web",
+    "active": true,
+    "events": [
+      "pull_request"
+    ],
+    "config": {
+      "content_type": "json",
+      "insecure_ssl": "0",
+      "secret": "********",
+      "url": "https://64b45dd1a69c.ngrok.io/webhook"
+    },
+    "updated_at": "2021-04-16T10:52:54Z",
+    "created_at": "2021-04-16T10:52:54Z",
+    "app_id": 110819
+  }
+}
