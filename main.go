@@ -1,27 +1,27 @@
 package main
 
 import (
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v35/github"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	"github.com/Azure/azure-storage-blob-go/azblob"
 
-	_ "embed"
-	"time"
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
-	"net/url"
+	"time"
 )
 
 func ParseConnectionString(s string) (*string, *string, error) {
@@ -83,6 +83,14 @@ type InvokeResponse struct {
 	Outputs     map[string]interface{} `json:"Outputs,omitempty"`
 	Logs        []string               `json:"Logs,omitempty"`
 	ReturnValue HttpBindingOutput      `json:"ReturnValue,omitempty"`
+}
+
+type EventGridEvent struct {
+	Subject     string          `json:"subject"`
+	Id          string          `json:"id"`
+	EventType   string          `json:"eventType"`
+	Data        json.RawMessage `json:"data"`
+	DataVersion string          `json:"dataVersion"`
 }
 
 type QueueMessage struct {
@@ -246,7 +254,6 @@ var installTemplate []byte
 func post_install_github_app(c echo.Context) error {
 	code := c.Request().URL.Query().Get("code")
 	state := c.Request().URL.Query().Get("state")
-	fmt.Printf("**** %s\n", state)
 
 	env := c.Get("Env").(*Env)
 	connStr, err := env.StorageConnectionString()
@@ -283,7 +290,6 @@ func post_install_github_app(c echo.Context) error {
 	}
 
 	parts := azblob.NewBlobURLParts(bloburl.URL())
-	fmt.Printf("%s %s\n", parts.ContainerName, parts.BlobName)
 	cred, err := azblob.NewSharedKeyCredential(*account, *key)
 	if err != nil {
 		panic(err)
@@ -352,10 +358,18 @@ func webhook(c echo.Context) error {
 				WorkflowRunId:   event.GetWorkflowRun().GetID(),
 				PullRequestNums: pullRequestNums,
 			}
-
-			outputs := map[string]interface{}{
-				"msg": msg,
+			rawmsg, err := json.Marshal(msg)
+			if err != nil {
+				return err
 			}
+			evt := EventGridEvent{
+				Id:          "test",
+				Subject:     "testsubject",
+				EventType:   "testtype",
+				Data:        rawmsg,
+				DataVersion: "testversion",
+			}
+			outputs := map[string]interface{}{"msg": []interface{}{evt}}
 			c.Set("Outputs", outputs)
 			return c.NoContent(http.StatusAccepted)
 		}
@@ -381,8 +395,14 @@ func process(c echo.Context) error {
 		return err
 	}
 
+	rawevent := request.Data["event"]
+	event := new(EventGridEvent)
+	if err := json.Unmarshal(rawevent, event); err != nil {
+		return err
+	}
+
 	msg := new(QueueMessage)
-	if err := request.Bind("msg", msg); err != nil {
+	if err := json.Unmarshal(event.Data, msg); err != nil {
 		return err
 	}
 
@@ -501,7 +521,7 @@ func AzureFunctionsHttp(name string) echo.MiddlewareFunc {
 				Body:      bytes.NewBuffer([]byte{}),
 			}
 			newCtx := c.Echo().NewContext(newReq, &writer)
-			newCtx.Set("AzureRequest", request)
+			newCtx.Set("AzureRequest", &request)
 			if err := next(&ProxyContext{Context: newCtx, Parent: c}); err != nil {
 				return err
 			}
