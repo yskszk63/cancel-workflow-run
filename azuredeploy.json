@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.3.255.40792",
-      "templateHash": "13666687805015520237"
+      "templateHash": "8875960569894127446"
     }
   },
   "parameters": {
@@ -38,7 +38,8 @@
     "saname": "[format('sa{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]",
     "appname": "[format('apps{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]",
     "instname": "[format('inst{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]",
-    "insttaglink": "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appname'))]"
+    "insttaglink": "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appname'))]",
+    "eventgridname": "[format('eg{0}{1}', variables('prefix'), uniqueString(resourceGroup().id))]"
   },
   "resources": [
     {
@@ -74,6 +75,30 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saname'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.EventGrid/topics",
+      "apiVersion": "2020-06-01",
+      "name": "[variables('eventgridname')]",
+      "location": "[variables('location')]"
+    },
+    {
+      "type": "Microsoft.EventGrid/eventSubscriptions",
+      "apiVersion": "2020-06-01",
+      "scope": "[format('Microsoft.EventGrid/topics/{0}', variables('eventgridname'))]",
+      "name": "[format('{0}fun', variables('eventgridname'))]",
+      "properties": {
+        "destination": {
+          "endpointType": "AzureFunction",
+          "properties": {
+            "resourceId": "[resourceId('Microsoft.Web/sites/functions', variables('appname'), 'process')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('appname'))]",
+        "[resourceId('Microsoft.EventGrid/topics', variables('eventgridname'))]"
       ]
     },
     {
@@ -119,8 +144,12 @@
               "value": "https://github.com/yskszk63/cancel-workflow-run/releases/download/latest/package.zip"
             },
             {
-              "name": "QueueStorageConnectionString",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('saname'), ';AccountKey=', listKeys(variables('saname'), '2019-06-01').keys[0].value)]"
+              "name": "EventGridUri",
+              "value": "[reference(resourceId('Microsoft.EventGrid/topics', variables('eventgridname'))).endpoint]"
+            },
+            {
+              "name": "EventGridKey",
+              "value": "[listKeys(variables('eventgridname'), '2020-06-01').key1]"
             },
             {
               "name": "APP_ID",
@@ -139,6 +168,7 @@
         "reserved": true
       },
       "dependsOn": [
+        "[resourceId('Microsoft.EventGrid/topics', variables('eventgridname'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saname'))]"
       ]
     }

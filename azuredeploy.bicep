@@ -1,4 +1,4 @@
-// https://aka.ms/bicepdemo#eJzVVm1v2zYQ/u5fwQ8BZAOxlKRrsHkIEDdVEy+LndlOs6EIBFo8O6xlkiOpOC/wfvuOkiXLjZp5+zbDkCje8bnj3XNHBgG5t1aZThBMeAyKwUL6z0dH/hImfiw1+EsumFwaX4ANGsFGncnY+Asea2nk1KLuIvhK219VQJ9TDfmzPU1FbLkUJihHbS6mmhqr09g6FWrasWTQaJwyMLHmymk1vXNuL9IJ6Spl3INw5pNBJqOJTyapJX0AZkhCLWiv1VBU0wWhSnFGEJyLGTkhntc4NRCjmWbrG/wP1MDxDwSEM85I1dy15g+ISi7haRebGKl7KecRGtJgdzJetXabLyejbPkuBmsMNR6oJomMqVuLUxqMTHUM51qmqtnyC1GmpzRM+aNbGFMRQ7Kcai8TGCroApzA0L2XXG2195IK/mcKo8xc81tkzlqrfDXGvliOQ/PvAbgwtkBw4/+GYOks4WKOILEUuOumd88ZA9F2sx1v/1VsONsnXqC0fOAMtAmuSk5jagLDLZgAl62312o0ZGoVpqbYb5mH9UQhN2BTFaU6qWSqKJ69l7Xyys8KBTmUGcqqjCoeuJ3QJIlm3N6nkwi1McmF55go4m3cHFmp6QwCk7+7cSxTYc3p0cHRYfvA/T20/dIgxFnsrNOMnwUrOuUIJ+dY7x3irUE/H3k4Z+ZpJwMoIFBMBaOaRb8OR05j1VhV/JskcrKDh4HTG4F+wM5T525pbe8l93kVMJjSNLFeJsWcKdCWgym8I5h0XfnKv4dp4lS+lJOkouB+GGm5BDbQfIaB39Z0vzJvSmpMS54z1/K8LcW7OtArsPeS1YGeh+O31i/oY3cGPYGNQQoHcLglhkclDbALoI61CF9rvV68KsfFbD6TPxkoQIMDsfHZ0EauXc2y42g1yz1h+Owe04qBUVJAzsHD9+2D9684WNT6P7AQ68KFCGu6TCqSoVLmKw+1hmuPciLW8QI7bcJz8Gj8pGADvU1c17iqWyo7gNvIj+3D18VUFP3b+yhOP9TeR7fTR6/WTWfqTIopn20ojEtGYC02kC0OVQm8rpKuYyV6/IucmHXFVfn1QJMU1Yqu+DGvpFAwJTmm6lpLK2OZnGRc/3ldo32EPsHuZ6jvrGCnLCR4OjpBwo0bmuZGA0P1U/vg2IWq5c9R9uXgzs+st0p3Vm9t5NNN/2zcG/RH0e1geBkOo+FNf9y7Cmt248UpNpVKHe4IHP4+DvsjHEafw6F712H/9W5H3O71dQ/Rzi/GowgH4+HNVdgfd52py/CPGmg810Dj3QPKw6zHmt7mNsVfl5I7g4qqaeVRLiqr5UoPL1QL1MuIhwnZzfHb8MOoNw5dgKNPw8FVdN09u+ye10a66IH5kZRd+J7M3DzPj98F+UWivZR6PsW+09apCDQkgJcsgzfFpUgkZYG7xhgbKBrPkZv+M1c7xve3FNzpn1Ea60NAVkz5deD/SXFkTNT7WON7doPdOXkXg8FlNArPhttHyRpr+2a6G+h3wb4Dclc5OJDLeJgDNjwkI+TN9W/uDL5B
+// https://aka.ms/bicepdemo#eJydV21v4jgQ/s6vyIdKAakktHtb3XGqVLabUq5XqAjd3mlVRSYZgpdg52wH+iLut984b4Q27dKLEBh7/Mx4Xp5xbNuYKxXLrm1PqQ9xAEtuPR0fW2uYWj4XYK0pC/haWgyU3bC34gH3pbWkvuCSzxTKLu0fpP0jtslTIiD7bs8S5ivKmbTLUZuymSBSicRXWoTIts8DaDTOApC+oLGWapp9qi6TqdGLY6m/DBpYxihdI5FlTBNlDAECaUREgTBbjZgIsjRIHNPAQHDKQuPUMM3GmQQf1TRbL/C/EAknvxjAtPLAqKq7EXSFqMYVPO6jEz0153zhoSIBai/lVW132XbDTbfvo7BGUWNFhBFxn+i9OCVA8kT40Bc8iZstq1hK5WIBM/qgN/qE+RCtZ8JMFyRhZAl6QZKD50xsc/CcMPpPAm6qrvkSmQatTbYbfV9sx6H8OABlUhUIevz/EBQJI8oWCOJzhqdumnMaBMDaerZrHr7yDQ0ODdOOBV/RAIS0r8ucxtDYkiqQNm7Lj9dKFcEKmAoFDQp7IfyYtQ2eqBjjWzitDGY+UaxLUEnsJSKqhLuowIPnXHhjpdWGiZham5Yqiamt3UGiyAupmidTD6VRcWEPRtswt2d1FRckBFtmvz3f5wlT8uy4c3zU7uiPibqfG4ahNXbzXMG/RWp1yxFOLpA0uoaZg347NnFOLpJuClBA4DJhARGB9+fY1RKbxqZi3zTi0z0stLWcC2KF9FVnbqnt4DmzeWMHMCNJpMx0FQMfg1AUZGGdgZkjKv+y/+Mk0iLfy0mjIqAf9DRfQzASNETH70rqp4xbzAWGJYuZ5k1zR/C+DvQa1JwHdaB9Z/Le/iV56IUwYMgunGmAo51leIi5hOASiE59hK/VXr+8KcfFbDaTfQcQAyocsa3NkjQy6WqUy0qqhtrRk32ctBWPqZ+GtdPunNSEdacS0/mahNxRGMpkWnJxvdYU1K2IvWcBJtaOERtsdVlIpI+pVTHxzXzD5qAoy63eZhU6MOaUqcmjhjF7OmEu8j66DXodoH6KEw+wErfjplnHb2V3zogOKQQPgrSI2FhVElvPy6j/JNYapCbampGqLh8wScM5FjGWQcwZZIxz9Lnd+fyKcYr28BPOQRbUvsE2UPoDI1TpDBsTpca5RRnt1DkRm3NEM3AvD0AOvUtT+qRGnVP1QX5tH72mzoLi3z9HERKUPkSzkwez1kyt6pyzGQ230cctLijMqHCHMarJkadumlJo8R98KnN+rbLJikQJihWN9GvGm06elvJGcMV9Hp2mzPZ7zshDhD7FPJKkyKJiBS9UeiGiUg9lcyuBrvotr66WtcC17517K9X+OvNqD3JxOzyfDEZD17sbja+csTe+HU4G107NaUw/wRZSYd09gZ2/Js7QxaH3zRnr3zrsfz/tidu7uRkgWv9y4no4mIxvr53hpKdVXTl/10Dj5QIEXlehWS3m7QWcvi4lfW0pqqaVebmorJYuPbyDL1EuTTwMyH6G3zlf3MHE0Q72Lsaja++md37V69d6uuh42QUkfUd4lAv5tDj5ZGd3z/aai8UMu0xbJMwWEAHeyyW+XKxZxElg65uvVHZM/AXmpvVE4z39W5L5raA1ppWcbG1Lyir49oMa0HU1Gsos36oqk71sJWmyH+2dMd7ga42m9KVn7+BdjkZXnuucj3cvDjnW7svMfqBvgr0Bcl9pHZjLeHUDJDxMRsjI9T+AE2nL
 // https://bicepdemo.z22.web.core.windows.net/
 // https://docs.microsoft.com/ja-jp/azure/azure-functions/functions-infrastructure-as-code
 
@@ -17,6 +17,7 @@ var saname = 'sa${prefix}${uniqueString(resourceGroup().id)}'
 var appname = 'apps${prefix}${uniqueString(resourceGroup().id)}'
 var instname = 'inst${prefix}${uniqueString(resourceGroup().id)}'
 var insttaglink = concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', appname)
+var eventgridname = 'eg${prefix}${uniqueString(resourceGroup().id)}'
 
 output appname string = appname
 output setup_url string = 'https://${appname}.azurewebsites.net/api/install_github_app'
@@ -51,6 +52,27 @@ resource blob 'Microsoft.Storage/storageAccounts/blobServices@2021-01-01' = {
     }
     dependsOn: [
       sa
+    ]
+}
+
+resource eventgrid 'Microsoft.EventGrid/topics@2020-06-01' = {
+    name: eventgridname
+    location: location
+}
+
+resource egsubscription 'Microsoft.EventGrid/eventSubscriptions@2020-06-01' = {
+    name: '${eventgridname}fun'
+    scope: eventgrid
+    properties: {
+      destination: {
+        endpointType: 'AzureFunction'
+        properties: {
+          resourceId: resourceId('Microsoft.Web/sites/functions', apps.name, 'process')
+        }
+      }
+    }
+    dependsOn: [
+      apps
     ]
 }
 
@@ -94,8 +116,12 @@ resource apps 'Microsoft.Web/sites@2018-11-01' = {
           value: 'https://github.com/yskszk63/cancel-workflow-run/releases/download/latest/package.zip'
         }
         {
-          name: 'QueueStorageConnectionString'
-          value: concat('DefaultEndpointsProtocol=https;AccountName=', sa.name, ';AccountKey=', listKeys(sa.name, '2019-06-01').keys[0].value)
+          name: 'EventGridUri'
+          value: eventgrid.properties.endpoint
+        }
+        {
+          name: 'EventGridKey'
+          value: listKeys(eventgrid.name, '2020-06-01').key1
         }
         {
           name: 'APP_ID'
