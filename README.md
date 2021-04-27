@@ -12,7 +12,7 @@ The main purpose is to repel miners.
 Sorry, Not publish this GitHub Apps.
 Because I don't have the money to get the backend working.
 
-## GitHub Apps Setup flow (For Developers)
+## GitHub Apps Setup flow (For Self hosted)
 
 ### Prerequisites
 
