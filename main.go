@@ -469,7 +469,7 @@ func process(c echo.Context) error {
 		for _, prfile := range prfiles {
 			if prfile.GetFilename() == workflow.GetPath() && prfile.GetStatus() == "added" {
 				response, _ := client.Actions.CancelWorkflowRunByID(context.Background(), msg.Owner, msg.RepositoryName, run.GetID())
-				c.Echo().Logger.Debugf("%s", response)
+				c.Echo().Logger.Infof("%s", response)
 
 				t := CommentTemplate{
 					Opener: pr.GetUser().GetLogin(),
@@ -648,7 +648,6 @@ func main() {
 	env := NewEnv()
 
 	e := echo.New()
-	e.Debug = true
 	if l, ok := e.Logger.(*log.Logger); ok {
 		l.SetHeader("${time_rfc3339} ${level}")
 	}
