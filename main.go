@@ -190,9 +190,25 @@ func install_github_app(c echo.Context) error {
 	if err != nil {
 		panic(err)
 	}
-	bloburl := conurl.NewBlockBlobURL(blob).URL()
-	bloburl.RawQuery = sas.Encode()
-	state := bloburl.String()
+	bloburl := conurl.NewBlockBlobURL(blob)
+
+	// check not exists
+	_, err = bloburl.GetProperties(context.Background(), azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{})
+	if err != nil {
+		if err, ok := err.(azblob.StorageError); ok {
+			if err.ServiceCode() != azblob.ServiceCodeBlobNotFound {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Already setup. If retry, please remove /%s/%s", container, blob)
+	}
+
+	sasbloburl := bloburl.URL()
+	sasbloburl.RawQuery = sas.Encode()
+	state := sasbloburl.String()
 
 	webhookUrl := *c.Request().URL
 	webhookUrl.Path = "/api/webhook"
@@ -272,6 +288,15 @@ func post_install_github_app(c echo.Context) error {
 	}
 	bloburl := azblob.NewBlockBlobURL(*rawurl, azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}))
 
+	created, err := azblob.UploadBufferToBlockBlob(context.Background(), []byte{}, bloburl, azblob.UploadToBlockBlobOptions{
+		AccessConditions: azblob.BlobAccessConditions{
+			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
+				// fail if exists
+				IfNoneMatch: azblob.ETagAny,
+			},
+		},
+	})
+
 	client := github.NewClient(nil)
 	appconf, _, err := client.Apps.CompleteAppManifest(context.Background(), code)
 	if err != nil {
@@ -284,7 +309,14 @@ func post_install_github_app(c echo.Context) error {
 	secretb64 := base64.StdEncoding.EncodeToString([]byte(secret))
 
 	deployjson := fmt.Sprintf(string(installTemplate), app_id, webhookSecret, secretb64)
-	_, err = azblob.UploadBufferToBlockBlob(context.Background(), []byte(deployjson), bloburl, azblob.UploadToBlockBlobOptions{})
+	_, err = azblob.UploadBufferToBlockBlob(context.Background(), []byte(deployjson), bloburl, azblob.UploadToBlockBlobOptions{
+		AccessConditions: azblob.BlobAccessConditions{
+			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
+				// fail if modified after created
+				IfMatch: created.ETag(),
+			},
+		},
+	})
 	if err != nil {
 		return err
 	}

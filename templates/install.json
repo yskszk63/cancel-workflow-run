@@ -13,7 +13,7 @@
         },
         "parameters": {
           "appid": {
-            "value": "%s"
+            "value": "%d"
           },
           "webhook_secret": {
             "value": "%s"
