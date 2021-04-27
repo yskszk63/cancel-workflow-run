@@ -1,4 +1,4 @@
-module azfun-go-test
+module cancel-workflow-run
 
 go 1.16
 
