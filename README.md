@@ -33,23 +33,29 @@ Because I don't have the money to get the backend working.
 - Secret ... NO NEED TO FILL. (fill after GitHub Apps created.)
 
 ![setup-1](assets/setup-1.png)
-![setup-1](assets/setup-2.png)
+![setup-2](assets/setup-2.png)
 
 ### 3. After deployed. Open `setup_url`
 
-![setup-1](assets/setup-3.png)
+![setup-3](assets/setup-3.png)
 
 ### 4. Create GitHub Apps.
 
 After `setup_url` opened. GitHub App Creation Site will be displayed.
 Fill GitHub App name, And click Create GitHub App Button.
 
+![setup-4](assets/setup-4.png)
+
 ### 5. Apply GitHub App Parameters.
 
 After click Create GitHub App Button. Azure template deploy screen displan again.
 Select Resource Group which fill in `2. Fill below And click Create`.
 
-Done.
+![setup-5](assets/setup-5.png)
+
+### 6. Done.
+
+You can now install it. 
 
 ## Using resources.
 
