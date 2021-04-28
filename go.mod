@@ -12,5 +12,6 @@ require (
 	github.com/labstack/echo/v4 v4.2.2
 	github.com/labstack/gommon v0.3.0
 	github.com/stretchr/testify v1.5.1 // indirect
+	golang.org/x/tools v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )

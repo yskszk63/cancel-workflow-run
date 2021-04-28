@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v35/github"
 	"github.com/labstack/echo/v4"
@@ -19,29 +18,8 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"text/template"
-	"time"
 )
-
-func ParseConnectionString(s string) (*string, *string, error) {
-	var account *string
-	var key *string
-	for _, kv := range strings.Split(s, ";") {
-		kv := strings.SplitN(kv, "=", 2)
-		k, v := kv[0], kv[1]
-		switch k {
-		case "AccountName":
-			account = &v
-		case "AccountKey":
-			key = &v
-		}
-	}
-	if account == nil || key == nil {
-		return nil, nil, fmt.Errorf("no AccountName or AccountKey")
-	}
-	return account, key, nil
-}
 
 type HttpTriggerBinding struct {
 	Url        string                   `json:"Url,omitempty"`
@@ -159,56 +137,31 @@ func install_github_app(c echo.Context) error {
 		return err
 	}
 
-	account, key, err := ParseConnectionString(*connStr)
+	container, blob := "install", "azuredeploy.json"
+
+	cred, err := newAzblobCredential(*connStr)
 	if err != nil {
 		return err
 	}
-	container, blob := "install", "azuredeploy.json"
 
-	cred, err := azblob.NewSharedKeyCredential(*account, *key)
+	conurl, err := ensureContainer(context.Background(), cred, container, defaultContainerTemplate)
 	if err != nil {
 		panic(err)
 	}
 
-	rawconurl, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", *account, container))
-	if err != nil {
-		panic(err)
-	}
-	conurl := azblob.NewContainerURL(*rawconurl, azblob.NewPipeline(cred, azblob.PipelineOptions{}))
-	_, err = conurl.Create(context.Background(), azblob.Metadata{}, azblob.PublicAccessNone)
-	if err != nil && err.(azblob.StorageError).ServiceCode() != azblob.ServiceCodeContainerAlreadyExists {
-		panic(err)
-	}
+	b := conurl.NewBlobURL(blob)
+	bloburl, err := newBlobUrlWithSas(cred, &b, 15, false, true)
 
-	sas, err := azblob.BlobSASSignatureValues{
-		Protocol:      azblob.SASProtocolHTTPS,
-		ExpiryTime:    time.Now().UTC().Add(15 * time.Minute),
-		ContainerName: container,
-		BlobName:      blob,
-		Permissions:   azblob.BlobSASPermissions{Write: true}.String(),
-	}.NewSASQueryParameters(cred)
+	blobWoSas := conurl.NewBlobURL(blob)
+	exists, err := existsBlob(context.Background(), &blobWoSas)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	bloburl := conurl.NewBlockBlobURL(blob)
-
-	// check not exists
-	_, err = bloburl.GetProperties(context.Background(), azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{})
-	if err != nil {
-		if err, ok := err.(azblob.StorageError); ok {
-			if err.ServiceCode() != azblob.ServiceCodeBlobNotFound {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
+	if exists {
 		return fmt.Errorf("Already setup. If retry, please remove /%s/%s", container, blob)
 	}
 
-	sasbloburl := bloburl.URL()
-	sasbloburl.RawQuery = sas.Encode()
-	state := sasbloburl.String()
+	state := bloburl.String()
 
 	webhookUrl := *c.Request().URL
 	webhookUrl.Path = "/api/webhook"
@@ -277,25 +230,16 @@ func post_install_github_app(c echo.Context) error {
 		return err
 	}
 
-	account, key, err := ParseConnectionString(*connStr)
+	cred, err := newAzblobCredential(*connStr)
 	if err != nil {
 		return err
 	}
 
-	rawurl, err := url.Parse(state)
+	bloburl, err := newBlobUrlFromSas(state)
 	if err != nil {
 		return err
 	}
-	bloburl := azblob.NewBlockBlobURL(*rawurl, azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}))
-
-	created, err := azblob.UploadBufferToBlockBlob(context.Background(), []byte{}, bloburl, azblob.UploadToBlockBlobOptions{
-		AccessConditions: azblob.BlobAccessConditions{
-			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
-				// fail if exists
-				IfNoneMatch: azblob.ETagAny,
-			},
-		},
-	})
+	created, err := touchIfAbsent(context.Background(), bloburl)
 
 	client := github.NewClient(nil)
 	appconf, _, err := client.Apps.CompleteAppManifest(context.Background(), code)
@@ -309,37 +253,12 @@ func post_install_github_app(c echo.Context) error {
 	secretb64 := base64.StdEncoding.EncodeToString([]byte(secret))
 
 	deployjson := fmt.Sprintf(string(installTemplate), app_id, webhookSecret, secretb64)
-	_, err = azblob.UploadBufferToBlockBlob(context.Background(), []byte(deployjson), bloburl, azblob.UploadToBlockBlobOptions{
-		AccessConditions: azblob.BlobAccessConditions{
-			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
-				// fail if modified after created
-				IfMatch: created.ETag(),
-			},
-		},
-	})
+	err = putIfUnmodified(context.Background(), bloburl, deployjson, created)
 	if err != nil {
 		return err
 	}
 
-	parts := azblob.NewBlobURLParts(bloburl.URL())
-	cred, err := azblob.NewSharedKeyCredential(*account, *key)
-	if err != nil {
-		panic(err)
-	}
-	sas, err := azblob.BlobSASSignatureValues{
-		Protocol:      azblob.SASProtocolHTTPS,
-		ExpiryTime:    time.Now().UTC().Add(15 * time.Minute),
-		ContainerName: parts.ContainerName,
-		BlobName:      parts.BlobName,
-		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
-	}.NewSASQueryParameters(cred)
-	if err != nil {
-		panic(err)
-	}
-
-	refurl := bloburl.URL()
-	refurl.RawQuery = sas.Encode()
-
+	refurl, err := newBlobUrlWithSas(cred, bloburl, 15, true, false)
 	deployurl := fmt.Sprintf("https://portal.azure.com/#create/Microsoft.Template/uri/%s", url.QueryEscape(refurl.String()))
 
 	return c.Redirect(http.StatusFound, deployurl)
