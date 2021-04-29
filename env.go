@@ -14,6 +14,7 @@ type env interface {
 	webhookSecret() []byte
 	secret() []byte
 	storageConnectionString() string
+	gitHubBaseUrl() *string
 }
 
 type defaultEnv struct{}
@@ -69,6 +70,10 @@ func (*defaultEnv) storageConnectionString() string {
 		panic("no AzureWebJobsStorage found.")
 	}
 	return connStr
+}
+
+func (*defaultEnv) gitHubBaseUrl() *string {
+	return nil
 }
 
 func injectEnv(e env) echo.MiddlewareFunc {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v35/github"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -12,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -22,23 +22,6 @@ type QueueMessage struct {
 	RepositoryName  string `json:"RepositoryName"`
 	WorkflowRunId   int64  `json:"WorkflowRunId"`
 	PullRequestNums []int  `json:"PullRequestNums"`
-}
-
-type GitHubAppsManifestHookAttrs struct {
-	Url    string `json:"url"`
-	Active bool   `json:"active,omitempty"`
-}
-
-type GitHubAppsManifest struct {
-	Name               string                         `json:"name,omitempty"`
-	Url                string                         `json:"url"`
-	HookAttrs          GitHubAppsManifestHookAttrs    `json:"hook_attributes,omitempty"`
-	RedirectUrl        string                         `json:"redirect_url,omitempty"`
-	CallbackUrls       []string                       `json:"callback_urls,omitempty"`
-	Description        string                         `json:"description,omitempty"`
-	Public             bool                           `json:"public,omitempty"`
-	DefaultEvents      []string                       `json:"default_events,omitempty"`
-	DefaultPermissions github.InstallationPermissions `json:"default_permissions,omitempty"`
 }
 
 func hello(c echo.Context) error {
@@ -76,33 +59,9 @@ func install_github_app(c echo.Context) error {
 	if exists {
 		return fmt.Errorf("Already setup. If retry, please remove /%s/%s", container, blob)
 	}
-
 	state := bloburl.String()
 
-	webhookUrl := *c.Request().URL
-	webhookUrl.Path = "/api/webhook"
-
-	redirecturl := c.Request().URL
-	redirecturl.RawQuery = ""
-
-	write := "write"
-	read := "read"
-	// https://docs.github.com/en/developers/apps/creating-a-github-app-from-a-manifest
-	manifest := GitHubAppsManifest{
-		Name:        "CancelWorkflowRun",
-		Url:         redirecturl.String(),
-		RedirectUrl: redirecturl.String(),
-		HookAttrs: GitHubAppsManifestHookAttrs{
-			Url: webhookUrl.String(),
-		},
-		Public:        false,
-		DefaultEvents: []string{"workflow_run"},
-		DefaultPermissions: github.InstallationPermissions{
-			Actions:      &write,
-			PullRequests: &write,
-			Metadata:     &read,
-		},
-	}
+	manifest := newGitHubAppsManifest("CancelWorkflowRun", *c.Request().URL, "/api/webhook")
 	manifestJson, err := json.Marshal(manifest)
 	if err != nil {
 		return err
@@ -120,8 +79,10 @@ func install_github_app(c echo.Context) error {
 }
 
 func post_install_github_app(c echo.Context) error {
-	code := c.Request().URL.Query().Get("code")
-	state := c.Request().URL.Query().Get("state")
+	query := new(gitHubAppsManifestResult)
+	if err := c.Bind(query); err != nil {
+		return err
+	}
 
 	env := getEnv(c)
 	connStr := env.storageConnectionString()
@@ -131,14 +92,13 @@ func post_install_github_app(c echo.Context) error {
 		return err
 	}
 
-	bloburl, err := newBlobUrlFromSas(state)
+	bloburl, err := newBlobUrlFromSas(query.State)
 	if err != nil {
 		return err
 	}
 	created, err := touchIfAbsent(context.Background(), bloburl)
 
-	client := github.NewClient(nil)
-	appconf, _, err := client.Apps.CompleteAppManifest(context.Background(), code)
+	appconf, err := completeAppManifest(context.Background(), env, query)
 	if err != nil {
 		return err
 	}
@@ -168,14 +128,10 @@ func post_install_github_app(c echo.Context) error {
 }
 
 func webhook(c echo.Context) error {
-	env := getEnv(c)
-	webhookSecret := env.webhookSecret()
-
-	payload, err := github.ValidatePayload(c.Request(), webhookSecret)
+	payload, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		return err
 	}
-
 	event, err := github.ParseWebHook(github.WebHookType(c.Request()), payload)
 	if err != nil {
 		return err
@@ -224,8 +180,6 @@ func webhook(c echo.Context) error {
 
 func process(c echo.Context) error {
 	env := getEnv(c)
-	appId := env.appId()
-	secret := env.secret()
 
 	request := new(invokeRequest)
 	if err := c.Bind(request); err != nil {
@@ -243,12 +197,10 @@ func process(c echo.Context) error {
 		return err
 	}
 
-	transport := http.DefaultTransport
-	installationTransport, err := ghinstallation.New(transport, appId, msg.InstallationId, secret)
+	client, err := newGitHubClientAsApp(env, msg.InstallationId)
 	if err != nil {
 		return err
 	}
-	client := github.NewClient(&http.Client{Transport: installationTransport})
 
 	run, _, err := client.Actions.GetWorkflowRunByID(context.Background(), msg.Owner, msg.RepositoryName, msg.WorkflowRunId)
 	if err != nil {
@@ -325,7 +277,7 @@ func main() {
 
 	e.POST("/hello", hello, azureFunctionsHttpAware("req"))
 	e.POST("/install_github_app", install_github_app, azureFunctionsHttpAware("req"))
-	e.POST("/webhook", webhook, azureFunctionsHttpAware("req"))
+	e.POST("/webhook", webhook, azureFunctionsHttpAware("req"), validatePayload)
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 
