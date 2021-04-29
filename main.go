@@ -14,8 +14,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 )
 
 type QueueMessage struct {
@@ -52,15 +50,12 @@ func install_github_app(c echo.Context) error {
 		return post_install_github_app(c)
 	}
 
-	env := c.Get("Env").(*Env)
-	connStr, err := env.StorageConnectionString()
-	if err != nil {
-		return err
-	}
+	env := getEnv(c)
+	connStr := env.storageConnectionString()
 
 	container, blob := "install", "azuredeploy.json"
 
-	cred, err := newAzblobCredential(*connStr)
+	cred, err := newAzblobCredential(connStr)
 	if err != nil {
 		return err
 	}
@@ -128,13 +123,10 @@ func post_install_github_app(c echo.Context) error {
 	code := c.Request().URL.Query().Get("code")
 	state := c.Request().URL.Query().Get("state")
 
-	env := c.Get("Env").(*Env)
-	connStr, err := env.StorageConnectionString()
-	if err != nil {
-		return err
-	}
+	env := getEnv(c)
+	connStr := env.storageConnectionString()
 
-	cred, err := newAzblobCredential(*connStr)
+	cred, err := newAzblobCredential(connStr)
 	if err != nil {
 		return err
 	}
@@ -176,11 +168,8 @@ func post_install_github_app(c echo.Context) error {
 }
 
 func webhook(c echo.Context) error {
-	env := c.Get("Env").(*Env)
-	webhookSecret, err := env.WebhookSecret()
-	if err != nil {
-		return err
-	}
+	env := getEnv(c)
+	webhookSecret := env.webhookSecret()
 
 	payload, err := github.ValidatePayload(c.Request(), webhookSecret)
 	if err != nil {
@@ -234,15 +223,9 @@ func webhook(c echo.Context) error {
 }
 
 func process(c echo.Context) error {
-	env := c.Get("Env").(*Env)
-	appId, err := env.AppId()
-	if err != nil {
-		return err
-	}
-	secret, err := env.Secret()
-	if err != nil {
-		return err
-	}
+	env := getEnv(c)
+	appId := env.appId()
+	secret := env.secret()
 
 	request := new(invokeRequest)
 	if err := c.Bind(request); err != nil {
@@ -321,70 +304,8 @@ func process(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-type Env struct{}
-
-func NewEnv() *Env {
-	return &Env{}
-}
-
-func (_ *Env) Port() string {
-	port, exists := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT")
-	if !exists {
-		port = "8080"
-	}
-	return port
-}
-
-func (*Env) AppId() (int64, error) {
-	appId, present := os.LookupEnv("APP_ID")
-	if !present {
-		return 0, fmt.Errorf("no APP_ID specified.")
-	}
-	appIdInt, err := strconv.ParseInt(appId, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("incorrect APP_ID")
-	}
-	return appIdInt, nil
-}
-
-func (*Env) WebhookSecret() ([]byte, error) {
-	webhookSecret, present := os.LookupEnv("WEBHOOK_SECRET")
-	if !present {
-		return nil, fmt.Errorf("no WEBHOOK_SECRET specified.")
-	}
-	return []byte(webhookSecret), nil
-}
-
-func (*Env) Secret() ([]byte, error) {
-	secretBase64, present := os.LookupEnv("SECRET")
-	if !present {
-		return nil, fmt.Errorf("no SECRET specified.")
-	}
-	secret, err := base64.StdEncoding.DecodeString(secretBase64)
-	if err != nil {
-		return nil, fmt.Errorf("incorrect SECRET.")
-	}
-
-	return []byte(secret), nil
-}
-
-func (*Env) StorageConnectionString() (*string, error) {
-	connStr, present := os.LookupEnv("AzureWebJobsStorage")
-	if !present {
-		return nil, fmt.Errorf("no AzureWebJobsStorage found.")
-	}
-	return &connStr, nil
-}
-
-func (e *Env) InjectEnv(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		c.Set("Env", e)
-		return next(c)
-	}
-}
-
 func main() {
-	env := NewEnv()
+	env := newEnv()
 
 	e := echo.New()
 	if l, ok := e.Logger.(*log.Logger); ok {
@@ -395,7 +316,7 @@ func main() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(env.InjectEnv)
+	e.Use(injectEnv(env))
 
 	e.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
 		fmt.Printf("REQ: %s\n", req)
@@ -408,7 +329,7 @@ func main() {
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 
-	e.Logger.Fatal(e.Start(":" + env.Port()))
+	e.Logger.Fatal(e.Start(":" + env.port()))
 }
 
 // vim:set noet:
