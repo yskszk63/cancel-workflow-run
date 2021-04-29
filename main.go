@@ -13,55 +13,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"text/template"
 )
-
-type HttpTriggerBinding struct {
-	Url        string                   `json:"Url,omitempty"`
-	Method     string                   `json:"Method,omitempty"`
-	Query      map[string]string        `json:"Query,omitempty"`
-	Headers    map[string][]string      `json:"Headers,omitempty"`
-	Params     map[string]string        `json:"Params,omitempty"`
-	Identities []map[string]interface{} `json:"Identities,omitempty"`
-	Body       string                   `json:"Body,omitempty"`
-}
-
-type InvokeRequest struct {
-	Data     map[string]json.RawMessage `json:"Data,omitempty"`
-	Metadata map[string]interface{}     `json:"Metadata,omitempty"`
-}
-
-func (i *InvokeRequest) Bind(name string, m interface{}) error {
-	// RawMessage to json string
-	var data string
-	if err := json.Unmarshal(i.Data[name], &data); err != nil {
-		return err
-	}
-	// json string to string
-	var data2 string
-	if err := json.Unmarshal([]byte(data), &data2); err != nil {
-		return err
-	}
-
-	return json.Unmarshal([]byte(data2), m)
-}
-
-type HttpBindingOutput struct {
-	Status  int               `json:"Status"`
-	Body    string            `json:"Body"`
-	Headers map[string]string `json:"Headers"`
-}
-
-type InvokeResponse struct {
-	Outputs     map[string]interface{} `json:"Outputs,omitempty"`
-	Logs        []string               `json:"Logs,omitempty"`
-	ReturnValue HttpBindingOutput      `json:"ReturnValue,omitempty"`
-}
 
 type EventGridEvent struct {
 	Subject     string          `json:"subject"`
@@ -341,7 +298,7 @@ func process(c echo.Context) error {
 		return err
 	}
 
-	request := new(InvokeRequest)
+	request := new(invokeRequest)
 	if err := c.Bind(request); err != nil {
 		return err
 	}
@@ -411,94 +368,8 @@ func process(c echo.Context) error {
 		}
 	}
 
-	response := InvokeResponse{}
+	response := invokeResponse{}
 	return c.JSON(http.StatusOK, response)
-}
-
-type ProxyContext struct {
-	echo.Context
-	Parent echo.Context
-}
-
-func (p *ProxyContext) Get(key string) interface{} {
-	if ret := p.Context.Get(key); ret != nil {
-		return ret
-	}
-	return p.Parent.Get(key)
-}
-
-type ProxyWriter struct {
-	StatusCode int
-	ResHeader  http.Header
-	Body       *bytes.Buffer
-}
-
-func (p *ProxyWriter) Header() http.Header {
-	return p.ResHeader
-}
-func (p *ProxyWriter) Write(b []byte) (int, error) {
-	return p.Body.Write(b)
-}
-func (p *ProxyWriter) WriteHeader(statusCode int) {
-	p.StatusCode = statusCode
-}
-
-func AzureFunctionsHttp(name string) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			request := new(InvokeRequest)
-			if err := c.Bind(request); err != nil {
-				return err
-			}
-
-			hostReq := new(HttpTriggerBinding)
-			if err := json.Unmarshal(request.Data[name], hostReq); err != nil {
-				return err
-			}
-
-			body := ioutil.NopCloser(bytes.NewReader([]byte(hostReq.Body)))
-			newReq, err := http.NewRequest(hostReq.Method, hostReq.Url, body)
-			if err != nil {
-				return err
-			}
-			for key, val := range hostReq.Headers {
-				for _, v := range val {
-					newReq.Header.Set(key, v)
-				}
-			}
-
-			writer := ProxyWriter{
-				ResHeader: http.Header{},
-				Body:      bytes.NewBuffer([]byte{}),
-			}
-			newCtx := c.Echo().NewContext(newReq, &writer)
-			newCtx.Set("AzureRequest", &request)
-			if err := next(&ProxyContext{Context: newCtx, Parent: c}); err != nil {
-				return err
-			}
-
-			Outputs, ok := newCtx.Get("Outputs").(map[string]interface{})
-			if !ok {
-				Outputs = map[string]interface{}{}
-			}
-			headers := map[string]string{}
-			for key, val := range newCtx.Response().Header() {
-				for _, v := range val {
-					headers[key] = v
-				}
-			}
-
-			invokeResponse := InvokeResponse{
-				ReturnValue: HttpBindingOutput{
-					Status:  writer.StatusCode,
-					Body:    writer.Body.String(),
-					Headers: headers,
-				},
-				Outputs: Outputs,
-			}
-			return c.JSON(http.StatusOK, invokeResponse)
-		}
-	}
 }
 
 type Env struct{}
@@ -580,9 +451,9 @@ func main() {
 		fmt.Printf("RES: %s\n", res)
 	}))
 
-	e.POST("/hello", hello, AzureFunctionsHttp("req"))
-	e.POST("/install_github_app", install_github_app, AzureFunctionsHttp("req"))
-	e.POST("/webhook", webhook, AzureFunctionsHttp("req"))
+	e.POST("/hello", hello, azureFunctionsHttpAware("req"))
+	e.POST("/install_github_app", install_github_app, azureFunctionsHttpAware("req"))
+	e.POST("/webhook", webhook, azureFunctionsHttpAware("req"))
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
 

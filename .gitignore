@@ -6,3 +6,5 @@ app
 package/
 package.zip
 samples/
+cov
+cov.html
