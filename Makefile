@@ -7,6 +7,6 @@ app: main.go go.mod go.sum
 	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $@
 
 clean:
-	$(RM) package.zip app
+	$(RM) -r package.zip package app
 
 .PHONY: package clean
