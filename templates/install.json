@@ -13,13 +13,13 @@
         },
         "parameters": {
           "appid": {
-            "value": "%d"
+            "value": "{{.AppId}}"
           },
           "webhook_secret": {
-            "value": "%s"
+            "value": "{{.WebHookSecret}}"
           },
           "secret": {
-            "value": "%s"
+            "value": "{{.Secret}}"
           }
         }
       }

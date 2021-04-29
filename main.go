@@ -9,7 +9,6 @@ import (
 
 	"bytes"
 	"context"
-	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"text/template"
 )
 
 type EventGridEvent struct {
@@ -34,32 +32,6 @@ type QueueMessage struct {
 	RepositoryName  string `json:"RepositoryName"`
 	WorkflowRunId   int64  `json:"WorkflowRunId"`
 	PullRequestNums []int  `json:"PullRequestNums"`
-}
-
-type CommentTemplate struct {
-	Opener string
-	Owner  string
-	RunUrl string
-}
-
-func (c *CommentTemplate) Render() (*string, error) {
-	text := `@{{.Opener}} @{{.Owner}}
-Hi, I'm a bot.
-
-Sorry, [This Workflow Run]({{.RunUrl}}) is cancelled.
-Because currently could not accept added at pull request.
-
-If needed, please re-run [This Workflow Run]({{.RunUrl}})`
-
-	t, err := template.New("Comment").Parse(text)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := bytes.NewBufferString("")
-	t.Execute(buf, c)
-	r := buf.String()
-	return &r, nil
 }
 
 type GitHubAppsManifestHookAttrs struct {
@@ -149,33 +121,16 @@ func install_github_app(c echo.Context) error {
 		return err
 	}
 
-	html := `<form action="https://github.com/settings/apps/new" method="POST">
-	<textarea name="manifest" hidden>{{.Manifest}}</textarea>
-	<input type="hidden" name="state" value="{{.State}}" />
-</form>
-<script>document.querySelector("form").submit()</script>`
-	_ = manifestJson
-
-	t, err := template.New("Html").Parse(html)
-	if err != nil {
-		return err
-	}
-
-	s := struct {
+	data := struct {
 		Manifest string
 		State    string
 	}{
 		Manifest: string(manifestJson),
 		State:    state,
 	}
-	buf := bytes.NewBufferString("")
-	t.Execute(buf, s)
 
-	return c.HTML(http.StatusOK, buf.String())
+	return c.Render(http.StatusOK, "post_manifest.html", data)
 }
-
-//go:embed templates/install.json
-var installTemplate []byte
 
 func post_install_github_app(c echo.Context) error {
 	code := c.Request().URL.Query().Get("code")
@@ -204,13 +159,20 @@ func post_install_github_app(c echo.Context) error {
 		return err
 	}
 
-	app_id := appconf.GetID()
-	webhookSecret := appconf.GetWebhookSecret()
-	secret := appconf.GetPEM()
-	secretb64 := base64.StdEncoding.EncodeToString([]byte(secret))
-
-	deployjson := fmt.Sprintf(string(installTemplate), app_id, webhookSecret, secretb64)
-	err = putIfUnmodified(context.Background(), bloburl, deployjson, created)
+	deployjson := bytes.NewBufferString("")
+	data := struct {
+		AppId         int64
+		WebHookSecret string
+		Secret        string
+	}{
+		AppId:         appconf.GetID(),
+		WebHookSecret: appconf.GetWebhookSecret(),
+		Secret:        base64.StdEncoding.EncodeToString([]byte(appconf.GetPEM())),
+	}
+	if err := c.Echo().Renderer.Render(deployjson, "", data, c); err != nil {
+		return err
+	}
+	err = putIfUnmodified(context.Background(), bloburl, deployjson.String(), created)
 	if err != nil {
 		return err
 	}
@@ -347,18 +309,21 @@ func process(c echo.Context) error {
 				response, _ := client.Actions.CancelWorkflowRunByID(context.Background(), msg.Owner, msg.RepositoryName, run.GetID())
 				c.Echo().Logger.Infof("%s", response)
 
-				t := CommentTemplate{
+				commentTextBuf := bytes.NewBufferString("")
+				data := struct {
+					Opener string
+					Owner  string
+					RunUrl string
+				}{
 					Opener: pr.GetUser().GetLogin(),
 					Owner:  msg.Owner,
 					RunUrl: run.GetHTMLURL(),
 				}
-				rendered, err := t.Render()
-				if err != nil {
+				if err := c.Echo().Renderer.Render(commentTextBuf, "comment.md", data, c); err != nil {
 					return err
 				}
-				comment := github.IssueComment{
-					Body: rendered,
-				}
+				commentText := commentTextBuf.String()
+				comment := github.IssueComment{Body: &commentText}
 
 				_, _, err = client.Issues.CreateComment(context.Background(), msg.Owner, msg.RepositoryName, pr.GetNumber(), &comment)
 				if err != nil {
@@ -441,6 +406,8 @@ func main() {
 	if l, ok := e.Logger.(*log.Logger); ok {
 		l.SetHeader("${time_rfc3339} ${level}")
 	}
+
+	e.Renderer = newTemplateRenderer()
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())

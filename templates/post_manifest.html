@@ -1,0 +1,6 @@
+<form action="https://github.com/settings/apps/new" method="POST">
+	<textarea name="manifest" hidden>{{.Manifest}}</textarea>
+	<input type="hidden" name="state" value="{{.State}}" />
+</form>
+<script>document.querySelector("form").submit()</script>
+
