@@ -133,3 +133,15 @@ func azureFunctionsHttpAware(name string) echo.MiddlewareFunc {
 		}
 	}
 }
+
+const contextAttrOutputs = "Outputs"
+
+func setOutput(c echo.Context, name string, val interface{}) {
+	outputs, ok := c.Get(contextAttrOutputs).(map[string]interface{})
+	if !ok {
+		outputs = make(map[string]interface{})
+		c.Set(contextAttrOutputs, outputs)
+	}
+
+	outputs[name] = val
+}

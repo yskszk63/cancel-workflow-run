@@ -18,14 +18,6 @@ import (
 	"strconv"
 )
 
-type EventGridEvent struct {
-	Subject     string          `json:"subject"`
-	Id          string          `json:"id"`
-	EventType   string          `json:"eventType"`
-	Data        json.RawMessage `json:"data"`
-	DataVersion string          `json:"dataVersion"`
-}
-
 type QueueMessage struct {
 	InstallationId  int64  `json:"InstallationId"`
 	Owner           string `json:"Owner"`
@@ -228,19 +220,11 @@ func webhook(c echo.Context) error {
 				WorkflowRunId:   event.GetWorkflowRun().GetID(),
 				PullRequestNums: pullRequestNums,
 			}
-			rawmsg, err := json.Marshal(msg)
+			evt, err := newEventGridEvent(fmt.Sprintf("%d", whPayload.GetInstallation().GetID()), "CancelWorkflowRunJob", "0", msg)
 			if err != nil {
 				return err
 			}
-			evt := EventGridEvent{
-				Id:          "test",
-				Subject:     "testsubject",
-				EventType:   "testtype",
-				Data:        rawmsg,
-				DataVersion: "testversion",
-			}
-			outputs := map[string]interface{}{"msg": []interface{}{evt}}
-			c.Set("Outputs", outputs)
+			setOutput(c, "msg", evt)
 			return c.NoContent(http.StatusAccepted)
 		}
 
@@ -266,7 +250,7 @@ func process(c echo.Context) error {
 	}
 
 	rawevent := request.Data["event"]
-	event := new(EventGridEvent)
+	event := new(eventGridEvent)
 	if err := json.Unmarshal(rawevent, event); err != nil {
 		return err
 	}

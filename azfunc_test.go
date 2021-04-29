@@ -124,3 +124,16 @@ func TestAzureFunctionsHttpAware(t *testing.T) {
 		})
 	}
 }
+
+func TestSetOutput(t *testing.T) {
+	req := httptest.NewRequest("GET", "/", nil)
+	res := httptest.NewRecorder()
+	ctx := echo.New().NewContext(req, res)
+
+	setOutput(ctx, "k", "OK")
+
+	outputs := ctx.Get(contextAttrOutputs)
+	if outputs.(map[string]interface{})["k"] != "OK" {
+		t.Fail()
+	}
+}
