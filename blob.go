@@ -90,9 +90,8 @@ func existsBlob(context context.Context, blob *azblob.BlobURL) (bool, error) {
 	if err != nil {
 		if err, ok := err.(azblob.StorageError); ok && err.ServiceCode() == azblob.ServiceCodeBlobNotFound {
 			return false, nil
-		} else {
-			return false, err
 		}
+		return false, err
 	}
 	return true, nil
 }

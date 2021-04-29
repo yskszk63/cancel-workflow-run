@@ -16,7 +16,7 @@ import (
 	"net/url"
 )
 
-type QueueMessage struct {
+type queueMessage struct {
 	InstallationId  int64  `json:"InstallationId"`
 	Owner           string `json:"Owner"`
 	RepositoryName  string `json:"RepositoryName"`
@@ -28,9 +28,9 @@ func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
 
-func install_github_app(c echo.Context) error {
+func installGithubApp(c echo.Context) error {
 	if c.Request().URL.Query().Get("code") != "" {
-		return post_install_github_app(c)
+		return postInstallGithubApp(c)
 	}
 
 	env := getEnv(c)
@@ -50,6 +50,9 @@ func install_github_app(c echo.Context) error {
 
 	b := conurl.NewBlobURL(blob)
 	bloburl, err := newBlobUrlWithSas(cred, &b, 15, false, true)
+	if err != nil {
+		return err
+	}
 
 	blobWoSas := conurl.NewBlobURL(blob)
 	exists, err := existsBlob(context.Background(), &blobWoSas)
@@ -78,7 +81,7 @@ func install_github_app(c echo.Context) error {
 	return c.Render(http.StatusOK, "post_manifest.html", data)
 }
 
-func post_install_github_app(c echo.Context) error {
+func postInstallGithubApp(c echo.Context) error {
 	query := new(gitHubAppsManifestResult)
 	if err := c.Bind(query); err != nil {
 		return err
@@ -97,6 +100,9 @@ func post_install_github_app(c echo.Context) error {
 		return err
 	}
 	created, err := touchIfAbsent(context.Background(), bloburl)
+	if err != nil {
+		return err
+	}
 
 	appconf, err := completeAppManifest(context.Background(), env, query)
 	if err != nil {
@@ -122,6 +128,9 @@ func post_install_github_app(c echo.Context) error {
 	}
 
 	refurl, err := newBlobUrlWithSas(cred, bloburl, 15, true, false)
+	if err != nil {
+		return err
+	}
 	deployurl := fmt.Sprintf("https://portal.azure.com/#create/Microsoft.Template/uri/%s", url.QueryEscape(refurl.String()))
 
 	return c.Redirect(http.StatusFound, deployurl)
@@ -147,31 +156,30 @@ func webhook(c echo.Context) error {
 	case *github.WorkflowRunEvent:
 		if event.GetAction() == "completed" {
 			return c.NoContent(http.StatusNoContent)
-
-		} else {
-			whPayload := new(github.WebHookPayload)
-			if err := json.Unmarshal(payload, whPayload); err != nil {
-				return err
-			}
-
-			var pullRequestNums []int
-			for _, pr := range event.GetWorkflowRun().PullRequests {
-				pullRequestNums = append(pullRequestNums, pr.GetNumber())
-			}
-			msg := QueueMessage{
-				InstallationId:  whPayload.GetInstallation().GetID(),
-				Owner:           event.GetRepo().GetOwner().GetLogin(),
-				RepositoryName:  event.GetRepo().GetName(),
-				WorkflowRunId:   event.GetWorkflowRun().GetID(),
-				PullRequestNums: pullRequestNums,
-			}
-			evt, err := newEventGridEvent(fmt.Sprintf("%d", whPayload.GetInstallation().GetID()), "CancelWorkflowRunJob", "0", msg)
-			if err != nil {
-				return err
-			}
-			setOutput(c, "msg", evt)
-			return c.NoContent(http.StatusAccepted)
 		}
+
+		whPayload := new(github.WebHookPayload)
+		if err := json.Unmarshal(payload, whPayload); err != nil {
+			return err
+		}
+
+		var pullRequestNums []int
+		for _, pr := range event.GetWorkflowRun().PullRequests {
+			pullRequestNums = append(pullRequestNums, pr.GetNumber())
+		}
+		msg := queueMessage{
+			InstallationId:  whPayload.GetInstallation().GetID(),
+			Owner:           event.GetRepo().GetOwner().GetLogin(),
+			RepositoryName:  event.GetRepo().GetName(),
+			WorkflowRunId:   event.GetWorkflowRun().GetID(),
+			PullRequestNums: pullRequestNums,
+		}
+		evt, err := newEventGridEvent(fmt.Sprintf("%d", whPayload.GetInstallation().GetID()), "CancelWorkflowRunJob", "0", msg)
+		if err != nil {
+			return err
+		}
+		setOutput(c, "msg", evt)
+		return c.NoContent(http.StatusAccepted)
 
 	default:
 		return fmt.Errorf("Unsupported Event Type %s", event)
@@ -192,7 +200,7 @@ func process(c echo.Context) error {
 		return err
 	}
 
-	msg := new(QueueMessage)
+	msg := new(queueMessage)
 	if err := json.Unmarshal(event.Data, msg); err != nil {
 		return err
 	}
@@ -276,7 +284,7 @@ func main() {
 	}))
 
 	e.POST("/hello", hello, azureFunctionsHttpAware("req"))
-	e.POST("/install_github_app", install_github_app, azureFunctionsHttpAware("req"))
+	e.POST("/install_github_app", installGithubApp, azureFunctionsHttpAware("req"))
 	e.POST("/webhook", webhook, azureFunctionsHttpAware("req"), validatePayload)
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })

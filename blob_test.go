@@ -254,6 +254,9 @@ func TestTouchIfAbsentAndUpdate(t *testing.T) {
 	defer dummy.Close()
 
 	blob, err := newBlobUrlFromSas(dummy.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
 	previous, err := touchIfAbsent(context.Background(), blob)
 	if err != nil {
 		t.Fatal(err)
