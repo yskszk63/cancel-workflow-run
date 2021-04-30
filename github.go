@@ -80,7 +80,10 @@ func newGitHubClientAsApp(env env, installationId int64) (*github.Client, error)
 	if err != nil {
 		return nil, err
 	}
-	client := github.NewClient(&http.Client{Transport: installationTransport})
+	if url := env.gitHubBaseUrl(); url != nil {
+		installationTransport.BaseURL = *url
+	}
+	client := newGitHubClient(env, &http.Client{Transport: installationTransport})
 	return client, nil
 }
 

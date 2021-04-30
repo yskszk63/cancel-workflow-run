@@ -43,13 +43,13 @@ func installGithubApp(c echo.Context) error {
 		return err
 	}
 
-	conurl, err := ensureContainer(context.Background(), cred, container, defaultContainerTemplate)
+	conurl, err := ensureContainer(env, context.Background(), cred, container)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	b := conurl.NewBlobURL(blob)
-	bloburl, err := newBlobUrlWithSas(cred, &b, 15, false, true)
+	bloburl, err := newBlobUrlWithSas(env, cred, &b, 15, false, true)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func postInstallGithubApp(c echo.Context) error {
 		WebHookSecret: appconf.GetWebhookSecret(),
 		Secret:        base64.StdEncoding.EncodeToString([]byte(appconf.GetPEM())),
 	}
-	if err := c.Echo().Renderer.Render(deployjson, "", data, c); err != nil {
+	if err := c.Echo().Renderer.Render(deployjson, "install.json", data, c); err != nil {
 		return err
 	}
 	err = putIfUnmodified(context.Background(), bloburl, deployjson.String(), created)
@@ -127,7 +127,7 @@ func postInstallGithubApp(c echo.Context) error {
 		return err
 	}
 
-	refurl, err := newBlobUrlWithSas(cred, bloburl, 15, true, false)
+	refurl, err := newBlobUrlWithSas(env, cred, bloburl, 15, true, false)
 	if err != nil {
 		return err
 	}

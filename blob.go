@@ -11,6 +11,10 @@ import (
 )
 
 func parseConnectionString(s string) (*string, *string, error) {
+	if len(s) < 1 {
+		return nil, nil, fmt.Errorf("empty connection string.")
+	}
+
 	var account *string
 	var key *string
 	for _, kv := range strings.Split(s, ";") {
@@ -45,8 +49,13 @@ func newAzblobCredential(s string) (*azblob.SharedKeyCredential, error) {
 
 const defaultContainerTemplate = "https://%s.blob.core.windows.net/%s"
 
-func ensureContainer(context context.Context, cred *azblob.SharedKeyCredential, container string, urlTemplate string) (*azblob.ContainerURL, error) {
-	rawurl, err := url.Parse(fmt.Sprintf(urlTemplate, cred.AccountName(), container))
+func ensureContainer(env env, context context.Context, cred *azblob.SharedKeyCredential, container string) (*azblob.ContainerURL, error) {
+	urlTemplate := env.containerTemplate()
+	if urlTemplate == nil {
+		t := defaultContainerTemplate
+		urlTemplate = &t
+	}
+	rawurl, err := url.Parse(fmt.Sprintf(*urlTemplate, cred.AccountName(), container))
 	if err != nil {
 		return nil, err
 	}
@@ -64,13 +73,13 @@ func ensureContainer(context context.Context, cred *azblob.SharedKeyCredential, 
 	return &conurl, nil
 }
 
-func newBlobUrlWithSas(cred azblob.StorageAccountCredential, blob *azblob.BlobURL, expireInMinutes int, read bool, write bool) (*azblob.BlobURL, error) {
+func newBlobUrlWithSas(env env, cred azblob.StorageAccountCredential, blob *azblob.BlobURL, expireInMinutes int, read bool, write bool) (*azblob.BlobURL, error) {
 	bloburl := blob.URL()
 	parts := azblob.NewBlobURLParts(bloburl)
 
 	sas, err := azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
-		ExpiryTime:    time.Now().UTC().Add(15 * time.Minute),
+		ExpiryTime:    env.now().UTC().Add(15 * time.Minute),
 		ContainerName: parts.ContainerName,
 		BlobName:      parts.BlobName,
 		Permissions:   azblob.BlobSASPermissions{Read: read, Write: write}.String(),

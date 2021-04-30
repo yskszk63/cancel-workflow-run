@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -15,6 +16,8 @@ type env interface {
 	secret() []byte
 	storageConnectionString() string
 	gitHubBaseUrl() *string
+	containerTemplate() *string
+	now() time.Time
 }
 
 type defaultEnv struct{}
@@ -74,6 +77,14 @@ func (*defaultEnv) storageConnectionString() string {
 
 func (*defaultEnv) gitHubBaseUrl() *string {
 	return nil
+}
+
+func (*defaultEnv) containerTemplate() *string {
+	return nil
+}
+
+func (*defaultEnv) now() time.Time {
+	return time.Now()
 }
 
 func injectEnv(e env) echo.MiddlewareFunc {

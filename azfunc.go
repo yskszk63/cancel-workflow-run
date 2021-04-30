@@ -16,7 +16,7 @@ type invokeRequest struct {
 type invokeResponse struct {
 	Outputs     map[string]interface{} `json:"Outputs,omitempty"`
 	Logs        []string               `json:"Logs,omitempty"`
-	ReturnValue httpBindingOut         `json:"ReturnValue,omitempty"`
+	ReturnValue *httpBindingOut        `json:"ReturnValue,omitempty"`
 }
 
 type httpTriggerIn struct {
@@ -122,7 +122,7 @@ func azureFunctionsHttpAware(name string) echo.MiddlewareFunc {
 			}
 
 			response := invokeResponse{
-				ReturnValue: httpBindingOut{
+				ReturnValue: &httpBindingOut{
 					Status:  innerRes.statusCode,
 					Body:    innerRes.body.String(),
 					Headers: headers,

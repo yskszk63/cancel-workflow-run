@@ -70,17 +70,34 @@ func TestNewAzblobCredentialWithIncorrectKey(t *testing.T) {
 	}
 }
 
+type TestContaienrEnv struct {
+	env
+	template string
+}
+
+func (t *TestContaienrEnv) containerTemplate() *string {
+	return &t.template
+}
+
+func newTestContainerEnv(s string) TestContaienrEnv {
+	return TestContaienrEnv{
+		env:      newEnv(),
+		template: s,
+	}
+}
+
 func TestEnsureContainer(t *testing.T) {
 	dummy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 	}))
 	defer dummy.Close()
 
+	env := newTestContainerEnv(dummy.URL + "/%s/%s")
 	cred, err := newAzblobCredential("AccountName=name;AccountKey=cGFzcwo=")
 	if err != nil {
 		t.Fatal(err)
 	}
-	url, err := ensureContainer(context.Background(), cred, "container", dummy.URL+"/%s/%s")
+	url, err := ensureContainer(&env, context.Background(), cred, "container")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,11 +113,12 @@ func TestEnsureContainerAlreadyExists(t *testing.T) {
 	}))
 	defer dummy.Close()
 
+	env := newTestContainerEnv(dummy.URL + "/%s/%s")
 	cred, err := newAzblobCredential("AccountName=name;AccountKey=cGFzcwo=")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ensureContainer(context.Background(), cred, "container", dummy.URL+"/%s/%s")
+	_, err = ensureContainer(&env, context.Background(), cred, "container")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,22 +131,24 @@ func TestEnsureContainerOtherError(t *testing.T) {
 	}))
 	defer dummy.Close()
 
+	env := newTestContainerEnv(dummy.URL + "/%s/%s")
 	cred, err := newAzblobCredential("AccountName=name;AccountKey=cGFzcwo=")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ensureContainer(context.Background(), cred, "container", dummy.URL+"/%s/%s")
+	_, err = ensureContainer(&env, context.Background(), cred, "container")
 	if err == nil {
 		t.Fail()
 	}
 }
 
 func TestEnsureContainerInvalidURL(t *testing.T) {
+	env := newTestContainerEnv("")
 	cred, err := newAzblobCredential("AccountName=name;AccountKey=cGFzcwo=")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ensureContainer(context.Background(), cred, "container", "")
+	_, err = ensureContainer(&env, context.Background(), cred, "container")
 	if err == nil {
 		t.Fail()
 	}
@@ -147,7 +167,7 @@ func TestNewBlobUrlWithSas(t *testing.T) {
 	}
 
 	b := conurl.NewBlobURL("test")
-	bloburl, err := newBlobUrlWithSas(cred, &b, 10, true, true)
+	bloburl, err := newBlobUrlWithSas(newEnv(), cred, &b, 10, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +186,7 @@ func TestNewBlobUrlWithSasNoCredential(t *testing.T) {
 	conurl := azblob.NewContainerURL(*u, azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}))
 
 	bloburl := conurl.NewBlobURL("test")
-	_, err = newBlobUrlWithSas(nil, &bloburl, 10, true, true)
+	_, err = newBlobUrlWithSas(newEnv(), nil, &bloburl, 10, true, true)
 	if err == nil {
 		t.Fail()
 	}
