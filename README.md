@@ -1,6 +1,7 @@
 # Cancel workflow run GitHub Apps
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/yskszk63/cancel-workflow-run)](https://goreportcard.com/report/github.com/yskszk63/cancel-workflow-run)
+[![codecov](https://codecov.io/gh/yskszk63/cancel-workflow-run/branch/main/graph/badge.svg?token=RFUNJ8CH9R)](https://codecov.io/gh/yskszk63/cancel-workflow-run)
 
 Cancel workflow run BOT.
 Cancel workflow run If Pull request contains new workflow, and which trigger pull request.
