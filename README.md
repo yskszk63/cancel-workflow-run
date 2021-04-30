@@ -3,6 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/yskszk63/cancel-workflow-run)](https://goreportcard.com/report/github.com/yskszk63/cancel-workflow-run)
 [![codecov](https://codecov.io/gh/yskszk63/cancel-workflow-run/branch/main/graph/badge.svg?token=RFUNJ8CH9R)](https://codecov.io/gh/yskszk63/cancel-workflow-run)
 [![](https://tokei.rs/b1/github/yskszk63/cancel-workflow-run)](https://github.com/XAMPPRocky/tokei)
+[![deploy](https://github.com/yskszk63/cancel-workflow-run/actions/workflows/deploy.yml/badge.svg)](https://github.com/yskszk63/cancel-workflow-run/actions/workflows/deploy.yml)
 
 Cancel workflow run BOT.
 Cancel workflow run If Pull request contains new workflow, and which trigger pull request.
