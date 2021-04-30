@@ -81,7 +81,7 @@ func TestHello(t *testing.T) {
 	}
 }
 
-func TestInstallGitHubApp(t *testing.T) {
+func TestSetupGitHubApp(t *testing.T) {
 	cases := []struct {
 		name         string
 		wantManifest string
@@ -90,7 +90,7 @@ func TestInstallGitHubApp(t *testing.T) {
 		{
 			name:         "ok",
 			wantManifest: `{"name":"CancelWorkflowRun","url":"/","hook_attributes":{"url":"/api/webhook"},"redirect_url":"/","default_events":["workflow_run"],"default_permissions":{"actions":"write","metadata":"read","pull_requests":"write"}}`,
-			wantState:    `http://xxx/myaccount/install/azuredeploy.json?se=1970-01-01T00%3A15%3A00Z&sig=AunHLRoKRtD3Rpg22iHdWc5s19b7UUzOh62xdOdoiEE%3D&sp=w&spr=https&sr=b&sv=2019-12-12`,
+			wantState:    `http://xxx/myaccount/setup/azuredeploy.json?se=1970-01-01T00%3A15%3A00Z&sig=dUIFrvS7Hccv5e8zaDZrUtfsQCJeFH9WKmFbucK03IA%3D&sp=w&spr=https&sr=b&sv=2019-12-12`,
 		},
 	}
 
@@ -98,12 +98,12 @@ func TestInstallGitHubApp(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			dummy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
-				case "/myaccount/install":
+				case "/myaccount/setup":
 					if r.URL.Query().Get("restype") == "container" {
 						w.Header().Add("x-ms-error-code", "ContainerAlreadyExists")
 						w.WriteHeader(404)
 					}
-				case "/myaccount/install/azuredeploy.json":
+				case "/myaccount/setup/azuredeploy.json":
 					w.Header().Add("x-ms-error-code", "BlobNotFound")
 					w.WriteHeader(404)
 				default:
@@ -117,7 +117,7 @@ func TestInstallGitHubApp(t *testing.T) {
 			e.Debug = true
 			e.Use(injectEnv(newTestEnv(dummy.URL)))
 			e.Renderer = testRenderer{}
-			e.GET("/", installGithubApp)
+			e.GET("/", setupGitHubApp)
 
 			req := httptest.NewRequest("GET", "/", nil)
 			res := httptest.NewRecorder()
@@ -150,7 +150,7 @@ func TestInstallGitHubApp(t *testing.T) {
 	}
 }
 
-func TestPostInstallGitHubApp(t *testing.T) {
+func TestPostSetupGitHubApp(t *testing.T) {
 	cases := []struct {
 		name           string
 		locationStarts string
@@ -167,7 +167,7 @@ func TestPostInstallGitHubApp(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			dummy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
-				case "/myaccount/install/azuredeploy.json":
+				case "/myaccount/setup/azuredeploy.json":
 					w.WriteHeader(200)
 				case "/api/v3/app-manifests/xxx/conversions":
 					w.WriteHeader(200)
@@ -182,9 +182,9 @@ func TestPostInstallGitHubApp(t *testing.T) {
 			e.Debug = true
 			e.Use(injectEnv(newTestEnv(dummy.URL)))
 			e.Renderer = testRenderer{}
-			e.GET("/", installGithubApp)
+			e.GET("/", setupGitHubApp)
 
-			req := httptest.NewRequest("GET", "/?code=xxx&state="+dummy.URL+"/myaccount/install/azuredeploy.json", nil)
+			req := httptest.NewRequest("GET", "/?code=xxx&state="+dummy.URL+"/myaccount/setup/azuredeploy.json", nil)
 			res := httptest.NewRecorder()
 			e.ServeHTTP(res, req)
 

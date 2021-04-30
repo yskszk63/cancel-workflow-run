@@ -28,15 +28,15 @@ func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
 
-func installGithubApp(c echo.Context) error {
+func setupGitHubApp(c echo.Context) error {
 	if c.Request().URL.Query().Get("code") != "" {
-		return postInstallGithubApp(c)
+		return postSetupGitHubApp(c)
 	}
 
 	env := getEnv(c)
 	connStr := env.storageConnectionString()
 
-	container, blob := "install", "azuredeploy.json"
+	container, blob := "setup", "azuredeploy.json"
 
 	cred, err := newAzblobCredential(connStr)
 	if err != nil {
@@ -81,7 +81,7 @@ func installGithubApp(c echo.Context) error {
 	return c.Render(http.StatusOK, "post_manifest.html", data)
 }
 
-func postInstallGithubApp(c echo.Context) error {
+func postSetupGitHubApp(c echo.Context) error {
 	query := new(gitHubAppsManifestResult)
 	if err := c.Bind(query); err != nil {
 		return err
@@ -119,7 +119,7 @@ func postInstallGithubApp(c echo.Context) error {
 		WebHookSecret: appconf.GetWebhookSecret(),
 		Secret:        base64.StdEncoding.EncodeToString([]byte(appconf.GetPEM())),
 	}
-	if err := c.Echo().Renderer.Render(deployjson, "install.json", data, c); err != nil {
+	if err := c.Echo().Renderer.Render(deployjson, "setup.json", data, c); err != nil {
 		return err
 	}
 	err = putIfUnmodified(context.Background(), bloburl, deployjson.String(), created)
@@ -284,7 +284,7 @@ func main() {
 	}))
 
 	e.POST("/hello", hello, azureFunctionsHttpAware("req"))
-	e.POST("/install_github_app", installGithubApp, azureFunctionsHttpAware("req"))
+	e.POST("/setup_github_app", setupGitHubApp, azureFunctionsHttpAware("req"))
 	e.POST("/webhook", webhook, azureFunctionsHttpAware("req"), validatePayload)
 	e.POST("/process", process)
 	e.GET("/", func(c echo.Context) error { return c.NoContent(http.StatusNoContent) })
