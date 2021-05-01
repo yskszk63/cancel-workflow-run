@@ -31,6 +31,11 @@ jobs:
         prerelease: true
         title: "Development Build"
         files: package.zip
+    - name: Archive package
+      uses: actions/upload-artifact@v2
+      with:
+        name: package
+        path: package.zip
 
   test-deploy:
     needs: package
@@ -42,4 +47,24 @@ jobs:
       env:
         APP_NAME: ${{ secrets.AZURE_FUNCTION_NAME }}
         API_KEY: ${{ secrets.AZURE_FUNCTION_API_KEY }}
+
+  release:
+    needs:
+      - package
+      - check
+    runs-on: "ubuntu-latest"
+    #if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Download Archive from package job
+      uses: actions/download-artifact@v2
+      with:
+        name: package
+    - name: Push Release
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: latest
+        prerelease: false
+        files: package.zip
+
 # vim:set ts=2 sw=2 sts=2:
