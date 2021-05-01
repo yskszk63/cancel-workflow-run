@@ -62,6 +62,8 @@ You can now install it.
 
 ## Using resources.
 
+![archtecture](assets/architecture.png)
+
 - Azure Functions
     + Linux consumption plan
     + (Backend language is go)
@@ -71,6 +73,19 @@ You can now install it.
     + For Azure Functions monitoring
 - Event Grid
     + Kick workflow cancel job for GitHub App webhook hooked Asynchronously.
+
+## Details
+
+### Trigger `workflow_run` flow
+
+![process](assets/process_dia.png)
+
+### Setup GitHub App flow
+
+![setup1](assets/setupflow_dia_1.png)
+![setup2](assets/setupflow_dia_2.png)
+
+It is drawn in [yskszk63/seqdia](https://github.com/yskszk63/seqdia).
 
 ## LICENSE
 
