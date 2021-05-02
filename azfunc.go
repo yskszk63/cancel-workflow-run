@@ -107,6 +107,7 @@ func azureFunctionsHttpAware(name string) echo.MiddlewareFunc {
 			}
 
 			if err = next(&ctx); err != nil {
+				c.Echo().Logger.Error(err)
 				if err, ok := err.(*echo.HTTPError); ok {
 					response := invokeResponse{
 						ReturnValue: &httpBindingOut{

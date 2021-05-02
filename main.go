@@ -60,7 +60,7 @@ func setupGitHubApp(c echo.Context) error {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("Already setup. If retry, please remove /%s/%s", container, blob)
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Already setup. If retry, please remove /%s/%s", container, blob))
 	}
 	state := bloburl.String()
 
@@ -97,11 +97,11 @@ func postSetupGitHubApp(c echo.Context) error {
 
 	bloburl, err := newBlobUrlFromSas(query.State)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "incorrect state.").SetInternal(err)
 	}
 	created, err := touchIfAbsent(context.Background(), bloburl)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "blob already exists or anything.").SetInternal(err)
 	}
 
 	appconf, err := completeAppManifest(context.Background(), env, query)
@@ -182,7 +182,7 @@ func webhook(c echo.Context) error {
 		return c.NoContent(http.StatusAccepted)
 
 	default:
-		return fmt.Errorf("Unsupported Event Type %s", event)
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("Unsupported Event Type %s", event))
 	}
 }
 
@@ -279,8 +279,8 @@ func main() {
 	e.Use(injectEnv(env))
 
 	e.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
-		fmt.Printf("REQ: %s\n", req)
-		fmt.Printf("RES: %s\n", res)
+		e.Logger.Infof("REQ: %s\n", req)
+		e.Logger.Infof("RES: %s\n", res)
 	}))
 
 	e.POST("/hello", hello, azureFunctionsHttpAware("req"))
