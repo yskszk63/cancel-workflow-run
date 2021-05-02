@@ -76,6 +76,15 @@ func TestAzureFunctionsHttpAware(t *testing.T) {
 			message: `{"Outputs":{},"ReturnValue":{"Status":404,"Body":"code=404, message=Not Found","Headers":{}}}`,
 		},
 		{
+			name:    "internal server error",
+			body:    `{"Data": {"req":{"Url":"/", "Method": "GET", "Body": "ok", "Headers": {"x-test": ["ok"]}}}}`,
+			status:  http.StatusOK,
+			message: `{"Outputs":{},"ReturnValue":{"Status":500,"Body":"Internal Server Error","Headers":{}}}`,
+			handler: func(c echo.Context) error {
+				return fmt.Errorf("error occurred.")
+			},
+		},
+		{
 			name:    "incorrectPayload",
 			body:    `0`,
 			status:  http.StatusBadRequest,
