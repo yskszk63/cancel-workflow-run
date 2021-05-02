@@ -269,7 +269,7 @@ func main() {
 
 	e := echo.New()
 	if l, ok := e.Logger.(*log.Logger); ok {
-		l.SetHeader("${time_rfc3339} ${level}")
+		l.SetLevel(log.INFO)
 	}
 
 	e.Renderer = newTemplateRenderer()
@@ -277,11 +277,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(injectEnv(env))
-
-	e.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
-		e.Logger.Infof("REQ: %s\n", req)
-		e.Logger.Infof("RES: %s\n", res)
-	}))
+	e.Use(middleware.BodyDump(handleBodyDump))
 
 	e.POST("/hello", hello, azureFunctionsHttpAware("req"))
 	e.POST("/setup_github_app", setupGitHubApp, azureFunctionsHttpAware("req"))
