@@ -359,6 +359,9 @@ func TestProcess(t *testing.T) {
 					"event": j,
 				},
 			})
+			if err != nil {
+				t.Fatal(err)
+			}
 			req := httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 			res := httptest.NewRecorder()

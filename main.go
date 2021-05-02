@@ -43,7 +43,7 @@ func setupGitHubApp(c echo.Context) error {
 		return err
 	}
 
-	conurl, err := ensureContainer(env, context.Background(), cred, container)
+	conurl, err := ensureContainer(context.Background(), env, cred, container)
 	if err != nil {
 		return err
 	}

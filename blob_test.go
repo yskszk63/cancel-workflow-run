@@ -97,7 +97,7 @@ func TestEnsureContainer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	url, err := ensureContainer(&env, context.Background(), cred, "container")
+	url, err := ensureContainer(context.Background(), &env, cred, "container")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestEnsureContainerAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ensureContainer(&env, context.Background(), cred, "container")
+	_, err = ensureContainer(context.Background(), &env, cred, "container")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestEnsureContainerOtherError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ensureContainer(&env, context.Background(), cred, "container")
+	_, err = ensureContainer(context.Background(), &env, cred, "container")
 	if err == nil {
 		t.Fail()
 	}
@@ -148,7 +148,7 @@ func TestEnsureContainerInvalidURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ensureContainer(&env, context.Background(), cred, "container")
+	_, err = ensureContainer(context.Background(), &env, cred, "container")
 	if err == nil {
 		t.Fail()
 	}

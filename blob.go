@@ -49,7 +49,7 @@ func newAzblobCredential(s string) (*azblob.SharedKeyCredential, error) {
 
 const defaultContainerTemplate = "https://%s.blob.core.windows.net/%s"
 
-func ensureContainer(env env, context context.Context, cred *azblob.SharedKeyCredential, container string) (*azblob.ContainerURL, error) {
+func ensureContainer(context context.Context, env env, cred *azblob.SharedKeyCredential, container string) (*azblob.ContainerURL, error) {
 	urlTemplate := env.containerTemplate()
 	if urlTemplate == nil {
 		t := defaultContainerTemplate
