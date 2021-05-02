@@ -370,7 +370,9 @@ func TestProcess(t *testing.T) {
 			if res.Result().StatusCode != http.StatusOK {
 				t.Fatalf("%d %s", res.Result().StatusCode, res.Body.String())
 			}
-			if strings.TrimSpace(res.Body.String()) != "{}" {
+			if strings.TrimSpace(res.Body.String()) != `{
+  "Outputs": null
+}` {
 				t.Fatalf("%s", res.Body.String())
 			}
 		})

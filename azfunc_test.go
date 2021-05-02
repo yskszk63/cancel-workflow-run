@@ -54,7 +54,7 @@ func TestAzureFunctionsHttpAware(t *testing.T) {
 			name:    "ok",
 			body:    `{"Data": {"req":{"Url":"/", "Method": "GET", "Body": "ok", "Headers": {"x-test": ["ok"]}}}}`,
 			status:  http.StatusOK,
-			message: `{"ReturnValue":{"Status":200,"Body":"ok","Headers":{"Content-Type":"text/plain; charset=UTF-8"}}}`,
+			message: `{"Outputs":{},"ReturnValue":{"Status":200,"Body":"ok","Headers":{"Content-Type":"text/plain; charset=UTF-8"}}}`,
 			handler: func(c echo.Context) error {
 				body, err := io.ReadAll(c.Request().Body)
 				if err != nil {
@@ -72,8 +72,8 @@ func TestAzureFunctionsHttpAware(t *testing.T) {
 		{
 			name:    "not found",
 			body:    `{"Data": {"req":{"Url":"/", "Method": "GET", "Body": "ok", "Headers": {"x-test": ["ok"]}}}}`,
-			status:  http.StatusNotFound,
-			message: `{"message":"Not Found"}`,
+			status:  http.StatusOK,
+			message: `{"Outputs":{},"ReturnValue":{"Status":404,"Body":"code=404, message=Not Found","Headers":{}}}`,
 		},
 		{
 			name:    "incorrectPayload",

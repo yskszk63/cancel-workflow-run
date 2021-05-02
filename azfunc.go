@@ -14,7 +14,7 @@ type invokeRequest struct {
 }
 
 type invokeResponse struct {
-	Outputs     map[string]interface{} `json:"Outputs,omitempty"`
+	Outputs     map[string]interface{} `json:"Outputs"`
 	Logs        []string               `json:"Logs,omitempty"`
 	ReturnValue *httpBindingOut        `json:"ReturnValue,omitempty"`
 }
@@ -107,7 +107,27 @@ func azureFunctionsHttpAware(name string) echo.MiddlewareFunc {
 			}
 
 			if err = next(&ctx); err != nil {
-				return err
+				if err, ok := err.(*echo.HTTPError); ok {
+					response := invokeResponse{
+						ReturnValue: &httpBindingOut{
+							Status:  err.Code,
+							Body:    err.Error(),
+							Headers: make(map[string]string),
+						},
+						Outputs: make(map[string]interface{}),
+					}
+					return c.JSON(http.StatusOK, response)
+				}
+
+				response := invokeResponse{
+					ReturnValue: &httpBindingOut{
+						Status:  http.StatusInternalServerError,
+						Body:    "Internal Server Error",
+						Headers: make(map[string]string),
+					},
+					Outputs: make(map[string]interface{}),
+				}
+				return c.JSON(http.StatusOK, response)
 			}
 
 			outputs, ok := ctx.Get("Outputs").(map[string]interface{})
