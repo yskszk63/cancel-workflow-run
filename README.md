@@ -10,6 +10,8 @@ Cancel workflow run If Pull request contains new workflow, and which trigger pul
 
 The main purpose is to repel miners.
 
+![image](assets/image.png)
+
 ## Install
 
 Sorry, Not publish this GitHub Apps.
